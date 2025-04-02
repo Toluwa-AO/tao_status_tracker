@@ -1,9 +1,7 @@
-
 import 'package:flutter/material.dart';
 import 'package:tao_status_tracker/presentation/screens/login_screen.dart';
 import 'package:tao_status_tracker/presentation/screens/regirstation_screen.dart';
 import 'package:tao_status_tracker/presentation/screens/splash_screen.dart';
-
 
 void main() {
   runApp(MyApp());
@@ -20,8 +18,8 @@ class MyApp extends StatelessWidget {
         // Add other theme configurations
       ),
       routes: {
-        '/': (context) => const SplashScreen(), // Root route
-        '/login': (context) =>  LoginScreen(),
+        '/': (context) => const SplashScreen(),
+        '/login': (context) => LoginScreen(),
         '/register': (context) => const RegistrationScreen(),
         // Add other routes as needed
       },

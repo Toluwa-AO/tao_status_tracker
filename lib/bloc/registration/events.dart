@@ -1,4 +1,3 @@
-// registration_event.dart
 abstract class RegistrationEvent {}
 
 class RegistrationSubmitted extends RegistrationEvent {
@@ -14,3 +13,10 @@ class RegistrationSubmitted extends RegistrationEvent {
     required this.confirmPassword,
   });
 }
+
+// Add the missing events for social authentication
+class RegisterWithGoogle extends RegistrationEvent {}
+
+class RegisterWithFacebook extends RegistrationEvent {}
+
+class RegisterWithApple extends RegistrationEvent {}
