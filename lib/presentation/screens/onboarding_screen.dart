@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:tao_status_tracker/presentation/screens/regirstation_screen.dart';
+import 'package:tao_status_tracker/presentation/screens/registration_screen.dart';
 import '../../core/utils/responsive.dart'; // Importing the responsive utility
 
 class OnboardingScreen extends StatefulWidget {

@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:tao_status_tracker/bloc/registration/bloc.dart';
@@ -7,7 +6,6 @@ import 'package:tao_status_tracker/bloc/registration/state.dart';
 import 'package:tao_status_tracker/core/utils/responsive.dart';
 import 'package:tao_status_tracker/presentation/screens/home_screen.dart';
 import 'package:tao_status_tracker/presentation/widgets/text_field.dart';
-
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -43,13 +41,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     if (_formKey.currentState!.validate()) {
       // Add this check
       context.read<RegistrationBloc>().add(
-            RegistrationSubmitted(
-              name: _nameController.text,
-              email: _emailController.text,
-              password: _passwordController.text,
-              confirmPassword: _confirmPasswordController.text,
-            ),
-          );
+        RegistrationSubmitted(
+          name: _nameController.text,
+          email: _emailController.text,
+          password: _passwordController.text,
+          confirmPassword: _confirmPasswordController.text,
+        ),
+      );
     }
   }
 
@@ -61,17 +59,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         listener: (context, state) {
           if (state is RegistrationFailure) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.error),
-                backgroundColor: Colors.red,
-              ),
+              SnackBar(content: Text(state.error), backgroundColor: Colors.red),
             );
           } else if (state is RegistrationSuccess) {
             // Navigate to home screen and remove all previous routes
             Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(
-                builder: (context) => const HomeScreen(),
-              ),
+              MaterialPageRoute(builder: (context) => const HomeScreen()),
               (route) =>
                   false, // This removes all previous routes from the stack
             );
@@ -114,14 +107,19 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               child: Text(
                 "Register",
                 style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFFDB501D)),
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFFDB501D),
+                ),
               ),
             ),
             Center(
-                child: Image.asset("assets/images/Registration.png",
-                    height: 200, width: 200)),
+              child: Image.asset(
+                "assets/images/Registration.png",
+                height: 200,
+                width: 200,
+              ),
+            ),
             Center(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -201,16 +199,18 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   foregroundColor: Colors.white,
                   fixedSize: const Size(160, 50),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(25)),
+                    borderRadius: BorderRadius.circular(25),
+                  ),
                   elevation: 5,
                 ),
-                child: const Text("Register",
-                    style:
-                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                child: const Text(
+                  "Register",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
               ),
             ),
             const SizedBox(height: 10),
-            _buildSocialLogin(),
+            _buildSocialLogin(context),
             const SizedBox(height: 5),
             Center(
               child: TextButton(
@@ -221,9 +221,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   TextSpan(
                     text: "Already have an account? ",
                     style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.black54),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black54,
+                    ),
                     children: [
                       TextSpan(
                         text: "Log in",
@@ -244,20 +245,25 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   Widget _buildDesktopView() => Container();
 }
 
-Widget _buildSocialLogin() {
+Widget _buildSocialLogin(BuildContext context) {
   return Center(
     child: Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
         _buildDivider(),
-        const Text("Or register with",
-            style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Colors.black87)),
+        const Text(
+          "Or register with",
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Colors.black87,
+          ),
+        ),
         IconButton(
           icon: Image.asset('assets/icons/Google.png', width: 30, height: 25),
-          onPressed: () {},
+          onPressed: () {
+            context.read<RegistrationBloc>().add(RegisterWithGoogle());
+          },
         ),
         IconButton(
           icon: Image.asset('assets/icons/Facebook.png', width: 30, height: 25),
@@ -274,7 +280,9 @@ Widget _buildSocialLogin() {
 }
 
 Widget _buildDivider() => Expanded(
-    child: Container(
-        height: 1,
-        color: Colors.black54,
-        margin: const EdgeInsets.symmetric(horizontal: 10)));
+  child: Container(
+    height: 1,
+    color: Colors.black54,
+    margin: const EdgeInsets.symmetric(horizontal: 10),
+  ),
+);

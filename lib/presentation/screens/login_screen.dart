@@ -56,7 +56,11 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 40),
               GestureDetector(
                 onTap: () => Navigator.pop(context),
-                child: const Icon(Icons.arrow_back, size: 28, color: Colors.black87),
+                child: const Icon(
+                  Icons.arrow_back,
+                  size: 28,
+                  color: Colors.black87,
+                ),
               ),
               const SizedBox(height: 10),
               const Center(
@@ -65,16 +69,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFFDB501D)
+                    color: Color(0xFFDB501D),
                   ),
                 ),
               ),
               const SizedBox(height: 10),
               Center(
-                child: Image.asset(
-                  "assets/images/login.png",
-                  height: 250,
-                ),
+                child: Image.asset("assets/images/login.png", height: 250),
               ),
               const SizedBox(height: 20),
               CustomTextField(
@@ -115,19 +116,20 @@ class _LoginScreenState extends State<LoginScreen> {
                     foregroundColor: Colors.white,
                     fixedSize: const Size(160, 50),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(25)
+                      borderRadius: BorderRadius.circular(25),
                     ),
                     elevation: 5,
                   ),
-                  child: state is LoginLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text(
-                          "Login",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold
+                  child:
+                      state is LoginLoading
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text(
+                            "Login",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
                 ),
               ),
               const SizedBox(height: 20),
@@ -142,14 +144,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: Colors.black54
+                        color: Colors.black54,
                       ),
                       children: [
                         TextSpan(
                           text: "Register",
-                          style: TextStyle(
-                            color: Color(0xFFDB501D)
-                          ),
+                          style: TextStyle(color: Color(0xFFDB501D)),
                         ),
                       ],
                     ),
@@ -174,15 +174,21 @@ class _LoginScreenState extends State<LoginScreen> {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
-              color: Colors.black87
-            )
+              color: Colors.black87,
+            ),
           ),
           IconButton(
             icon: Image.asset('assets/icons/Google.png', width: 30, height: 25),
-            onPressed: () {},
+            onPressed: () {
+              context.read<LoginBloc>().add(LoginWithGoogle());
+            },
           ),
           IconButton(
-            icon: Image.asset('assets/icons/Facebook.png', width: 30, height: 25),
+            icon: Image.asset(
+              'assets/icons/Facebook.png',
+              width: 30,
+              height: 25,
+            ),
             onPressed: () {},
           ),
           IconButton(
@@ -199,8 +205,8 @@ class _LoginScreenState extends State<LoginScreen> {
     child: Container(
       height: 1,
       color: Colors.black54,
-      margin: const EdgeInsets.symmetric(horizontal: 10)
-    )
+      margin: const EdgeInsets.symmetric(horizontal: 10),
+    ),
   );
 
   @override
@@ -210,14 +216,14 @@ class _LoginScreenState extends State<LoginScreen> {
       child: BlocConsumer<LoginBloc, LoginState>(
         listener: (context, state) {
           if (state is LoginFailure) {
-            ScaffoldMessenger.of(context)
-                .showSnackBar(SnackBar(content: Text(state.error)));
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.error)));
           } else if (state is LoginSuccess) {
             Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(
-                builder: (context) => const HomeScreen(),
-              ),
-              (route) => false, // This removes all previous routes from the stack
+              MaterialPageRoute(builder: (context) => const HomeScreen()),
+              (route) =>
+                  false, // This removes all previous routes from the stack
             );
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
@@ -225,7 +231,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 backgroundColor: Colors.green,
               ),
             );
-
           }
         },
         builder: (context, state) {
