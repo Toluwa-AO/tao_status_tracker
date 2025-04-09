@@ -23,10 +23,10 @@ class RegisterWithFacebook extends RegistrationEvent {}
 class RegisterWithApple extends RegistrationEvent {}
 
 // OTP Authentication Events
-class SendPhoneOtp extends RegistrationEvent {
+class SendOtpToPhone extends RegistrationEvent {
   final String phoneNumber;
 
-  SendPhoneOtp({required this.phoneNumber});
+ SendOtpToPhone({required this.phoneNumber});
 }
 
 class VerifyPhoneOtp extends RegistrationEvent {
@@ -36,14 +36,15 @@ class VerifyPhoneOtp extends RegistrationEvent {
   VerifyPhoneOtp({required this.verificationId, required this.smsCode});
 }
 
-class SendEmailOtp extends RegistrationEvent {
+class SendOtpToEmail extends RegistrationEvent {
   final String email;
 
-  SendEmailOtp({required this.email});
+  SendOtpToEmail({required this.email});
 }
 
 class VerifyEmailOtp extends RegistrationEvent {
   final String emailLink;
+  final String enteredOtp;
 
-  VerifyEmailOtp({required this.emailLink});
+  VerifyEmailOtp({required this.emailLink, required this.enteredOtp});
 }
