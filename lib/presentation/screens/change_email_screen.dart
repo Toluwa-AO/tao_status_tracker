@@ -29,10 +29,19 @@ class _ChangeEmailScreenState extends State<ChangeEmailScreen> {
           children: [
             const Text('Enter your new email'),
             TextField(controller: _emailController, decoration: const InputDecoration(labelText: 'New Email')),
-            ElevatedButton(
+            SizedBox(height: 20),
+             ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFFDB501D), // Replace with your login/register button color
+                foregroundColor: Colors.white, // Replace with your login/register button text color
+                padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 30),
+                shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                ),
+              ),
               onPressed: _submitNewEmail,
-              child: const Text('Send OTP'),
-            ),
+              child: const Text('I have verified my email'),
+              ),
           ],
         ),
       ),

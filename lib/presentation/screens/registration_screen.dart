@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:tao_status_tracker/bloc/registration/bloc.dart';
 import 'package:tao_status_tracker/bloc/registration/events.dart';
 import 'package:tao_status_tracker/bloc/registration/state.dart';
 import 'package:tao_status_tracker/core/utils/responsive.dart';
-import 'package:tao_status_tracker/presentation/screens/home_screen.dart';
+import 'package:tao_status_tracker/presentation/screens/otp_screen.dart';
 import 'package:tao_status_tracker/presentation/widgets/text_field.dart';
 
 class RegistrationScreen extends StatefulWidget {
@@ -37,17 +38,39 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   void _toggleConfirmPasswordVisibility() =>
       setState(() => _isConfirmPasswordVisible = !_isConfirmPasswordVisible);
 
-  void _submitRegistration(BuildContext context) {
+  Future<void> _submitRegistration(BuildContext context) async {
     if (_formKey.currentState!.validate()) {
-      // Add this check
-      context.read<RegistrationBloc>().add(
-        RegistrationSubmitted(
-          name: _nameController.text,
-          email: _emailController.text,
-          password: _passwordController.text,
-          confirmPassword: _confirmPasswordController.text,
-        ),
-      );
+      try {
+        // Register user using FirebaseAuth
+        final FirebaseAuth auth = FirebaseAuth.instance;
+        UserCredential userCredential = await auth.createUserWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
+
+        // Send email verification
+        await userCredential.user?.sendEmailVerification();
+
+        // Navigate to OTP screen
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => OTPScreen(email: _emailController.text.trim()),
+          ),
+        );
+
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Verification email sent! Please check your inbox.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } catch (e) {
+        // Show error message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
@@ -60,21 +83,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           if (state is RegistrationFailure) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(state.error), backgroundColor: Colors.red),
-            );
-          } else if (state is RegistrationSuccess) {
-            // Navigate to home screen and remove all previous routes
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (context) => const HomeScreen()),
-              (route) =>
-                  false, // This removes all previous routes from the stack
-            );
-
-            // Show success message
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Registration successful!'),
-                backgroundColor: Colors.green,
-              ),
             );
           }
         },
@@ -96,7 +104,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     return Padding(
       padding: const EdgeInsets.all(21.0),
       child: Form(
-        // Add Form widget here
         key: _formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -134,11 +141,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       if (value.length < 2) {
                         return 'Name must be at least 2 characters long';
                       }
-                      // Optional: Check if name contains only letters and spaces
                       if (!RegExp(r'^[a-zA-Z ]+$').hasMatch(value)) {
                         return 'Name can only contain letters and spaces';
                       }
-                      return null; // Return null if validation passes
+                      return null;
                     },
                   ),
                   const SizedBox(height: 5),
