@@ -29,6 +29,7 @@ dependencies:
   firebase_app_check: ^0.3.2+5
   sign_in_with_apple: ^6.1.4
   mailer: ^6.0.1
+  flutter_dotenv: ^5.0.2
 
 
 dev_dependencies:

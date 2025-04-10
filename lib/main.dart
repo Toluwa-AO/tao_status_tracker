@@ -3,20 +3,21 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:tao_status_tracker/presentation/screens/login_screen.dart';
 import 'package:tao_status_tracker/presentation/screens/registration_screen.dart';
-
 import 'package:tao_status_tracker/presentation/screens/splash_screen.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   try {
+    await dotenv.load();
     await Firebase.initializeApp(
-      options: const FirebaseOptions(
-        apiKey: "YOUR_API_KEY",
-        appId: "YOUR_APP_ID",
-        messagingSenderId: "YOUR_SENDER_ID",
-        projectId: "YOUR_PROJECT_ID",
-        storageBucket: "YOUR_STORAGE_BUCKET",
+      options: FirebaseOptions(
+        apiKey: dotenv.env['API_KEY']!,
+        appId: dotenv.env['APP_ID']!,
+        messagingSenderId: dotenv.env['MESSAGING_SENDER_ID']!,
+        projectId: dotenv.env['PROJECT_ID']!,
+        storageBucket: dotenv.env['STORAGE_BUCKET']!,
       ),
     );
 
