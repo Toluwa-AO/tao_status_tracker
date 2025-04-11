@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/utils/responsive.dart';
-import 'onboarding_screen.dart'; // Replace with your onboarding screen import
+import 'home_screen.dart';
+import 'login_screen.dart';
+import 'onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({Key? key}) : super(key: key);
+  const SplashScreen({super.key});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -17,28 +21,67 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   void initState() {
     super.initState();
 
-    // Initialize animation controller
+    // Initialize animation
+    _setupAnimation();
+
+    // Handle navigation after splash screen
+    _handleNavigation();
+  }
+
+  void _setupAnimation() {
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 1),
+      duration: const Duration(seconds:3),
     );
 
-    // Define fade-in animation
     _fadeAnimation = CurvedAnimation(
       parent: _animationController,
       curve: Curves.easeIn,
     );
 
-    // Start animation
     _animationController.forward();
+  }
 
-    // Navigate to onboarding after 8 seconds
-    Future.delayed(const Duration(seconds: 8), () {
+  Future<void> _handleNavigation() async {
+    // Wait for animation to complete
+    await Future.delayed(const Duration(seconds: 5));
+    if (!mounted) return;
+
+    // Check if it's the user's first time opening the app
+    final prefs = await SharedPreferences.getInstance();
+    final isFirstTime = prefs.getBool('is_first_time') ?? true;
+
+    if (isFirstTime) {
+      // Navigate to onboarding screen
+      await prefs.setBool('is_first_time', false);
+      if (!mounted) return;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => OnboardingScreen()),
       );
-    });
+    } else {
+      // Check authentication state
+      final user = FirebaseAuth.instance.currentUser;
+
+      if (user != null) {
+        // User is logged in, navigate to HomeScreen
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => HomeScreen(user: user),
+          ),
+        );
+      } else {
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const LoginScreen(),
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -50,7 +93,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // Updated background color
+      backgroundColor: Colors.white,
       body: Responsive(
         mobile: _buildMobileView(),
         tablet: _buildTabletView(),
@@ -73,13 +116,18 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
               fit: BoxFit.contain,
             ),
             const SizedBox(height: 20),
-            Text(
+            const Text(
               "Status Tracker",
               style: TextStyle(
-                  color: const Color(0xFFDB501D), 
-                  fontSize: 24, fontWeight: FontWeight.bold
+                color: Color(0xFFDB501D),
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
               ),
-            )
+            ),
+            const SizedBox(height: 30),
+            const CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFDB501D)),
+            ),
           ],
         ),
       ),
@@ -87,10 +135,10 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   }
 
   Widget _buildTabletView() {
-    return Center(child: Text("Tablet View"));
+    return _buildMobileView(); // You can customize this for tablet
   }
 
   Widget _buildDesktopView() {
-    return Center(child: Text("Desktop View"));
+    return _buildMobileView(); // You can customize this for desktop
   }
 }

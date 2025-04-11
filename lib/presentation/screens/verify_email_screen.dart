@@ -3,15 +3,15 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:tao_status_tracker/presentation/screens/success_screen.dart';
 import 'package:tao_status_tracker/presentation/screens/change_email_screen.dart';
 
-class OTPScreen extends StatefulWidget {
+class VerifyEmailScreen extends StatefulWidget {
   final String email;
-  const OTPScreen({super.key, required this.email});
+  const VerifyEmailScreen({Key? key, required this.email}) : super(key: key);
 
   @override
-  State<OTPScreen> createState() => _OTPScreenState();
+  State<VerifyEmailScreen> createState() => _VerifyEmailScreen();
 }
 
-class _OTPScreenState extends State<OTPScreen> {
+class _VerifyEmailScreen extends State<VerifyEmailScreen> {
   final TextEditingController _otpController = TextEditingController();
 
   Future<void> _verifyEmail() async {

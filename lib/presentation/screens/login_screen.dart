@@ -120,16 +120,15 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     elevation: 5,
                   ),
-                  child:
-                      state is LoginLoading
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text(
-                            "Login",
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
+                  child: state is LoginLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text(
+                          "Login",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
                           ),
+                        ),
                 ),
               ),
               const SizedBox(height: 20),
@@ -202,12 +201,12 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildDivider() => Expanded(
-    child: Container(
-      height: 1,
-      color: Colors.black54,
-      margin: const EdgeInsets.symmetric(horizontal: 10),
-    ),
-  );
+        child: Container(
+          height: 1,
+          color: Colors.black54,
+          margin: const EdgeInsets.symmetric(horizontal: 10),
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -216,14 +215,15 @@ class _LoginScreenState extends State<LoginScreen> {
       child: BlocConsumer<LoginBloc, LoginState>(
         listener: (context, state) {
           if (state is LoginFailure) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(state.error)));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.error)),
+            );
           } else if (state is LoginSuccess) {
             Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (context) => const HomeScreen()),
-              (route) =>
-                  false, // This removes all previous routes from the stack
+              MaterialPageRoute(
+                builder: (context) => HomeScreen(user: state.user), // Pass user
+              ),
+              (route) => false, // Remove all previous routes
             );
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(

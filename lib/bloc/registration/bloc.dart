@@ -1,15 +1,12 @@
 import 'dart:math';
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
-import 'package:tao_status_tracker/core/services/email_services.dart';
-import 'package:tao_status_tracker/core/services/firestore_service.dart';
 import 'package:flutter/foundation.dart';
+import 'package:tao_status_tracker/core/services/firestore_service.dart';
 import 'events.dart';
 import 'state.dart';
-
 
 class RegistrationBloc extends Bloc<RegistrationEvent, RegistrationState> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -20,83 +17,81 @@ class RegistrationBloc extends Bloc<RegistrationEvent, RegistrationState> {
     on<RegistrationSubmitted>(_onRegistrationSubmitted);
     on<RegisterWithGoogle>(_onRegisterWithGoogle);
     on<RegisterWithApple>(_onRegisterWithApple);
-    on<SendOtpToPhone>(_onSendOtpToPhone);
-    on<VerifyPhoneOtp>(_onVerifyPhoneOtp);
-    on<SendOtpToEmail>(_onSendOtpToEmail);
-    on<VerifyEmailOtp>(_onVerifyEmailOtp);
   }
 
   Future<void> _onRegistrationSubmitted(
-      RegistrationSubmitted event, Emitter<RegistrationState> emit) async {
+    RegistrationSubmitted event,
+    Emitter<RegistrationState> emit,
+  ) async {
     emit(RegistrationLoading());
+    
     try {
-      if (event.name.isEmpty || event.email.isEmpty ||
-          event.password.isEmpty || event.confirmPassword.isEmpty) {
-        emit(RegistrationFailure('Please fill all fields'));
-        return;
-      }
-      if (event.password != event.confirmPassword) {
-        emit(RegistrationFailure('Passwords do not match'));
+      // Validate input
+      if (_validateInput(event, emit)) {
         return;
       }
 
-      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
-        email: event.email,
-        password: event.password,
-      );
-      final user = userCredential.user;
-      if (user != null) {
-        await user.updateDisplayName(event.name);
-        try {
-          await _firestoreService.saveUserData(
-            user.uid,
-            event.name,
-            event.email,
-          );
-        } catch (e) {
-          // Continue even if Firestore fails since auth succeeded
-          debugPrint('Firestore error: ${e.toString()}');
-        }
-      }
+      // Create user account
+      final UserCredential userCredential = 
+          await _createUserAccount(event.email, event.password);
+      
+      // Update user profile and save to Firestore
+      await _updateUserProfile(userCredential.user, event.name, event.email);
 
-      final otp = _generateOtp();
-      await EmailService.sendOtp(event.email, otp);
+      // Send email verification
+      await userCredential.user?.sendEmailVerification();
 
-      emit(OtpSent(
-        email: event.email,
-        otp: otp,
-      ));
+      emit(RegistrationSuccess(event.email));
     } on FirebaseAuthException catch (e) {
-      emit(RegistrationFailure(e.message ?? 'Registration failed'));
+      emit(RegistrationFailure(_getFirebaseErrorMessage(e)));
     } catch (e) {
-      emit(RegistrationFailure('Unexpected error occurred'));
+      emit(RegistrationFailure('An unexpected error occurred'));
+      debugPrint('Registration error: ${e.toString()}');
     }
   }
 
   Future<void> _onRegisterWithGoogle(
-      RegisterWithGoogle event, Emitter<RegistrationState> emit) async {
+    RegisterWithGoogle event,
+    Emitter<RegistrationState> emit,
+  ) async {
     emit(RegistrationLoading());
+    
     try {
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
-        emit(RegistrationFailure("Google sign-up canceled"));
+        emit(RegistrationFailure('Google sign-in was cancelled'));
         return;
       }
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      final AuthCredential credential = GoogleAuthProvider.credential(
+
+      final GoogleSignInAuthentication googleAuth = 
+          await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
-      await _auth.signInWithCredential(credential);
-      emit(RegistrationSuccess());
+
+      final userCredential = await _auth.signInWithCredential(credential);
+      
+      // Save additional user data to Firestore
+      await _updateUserProfile(
+        userCredential.user,
+        userCredential.user?.displayName ?? '',
+        userCredential.user?.email ?? '',
+      );
+
+      emit(RegistrationSuccess(userCredential.user?.email ?? ''));
     } catch (e) {
-      emit(RegistrationFailure("Google sign-up failed"));
+      emit(RegistrationFailure('Google sign-in failed. Please try again.'));
+      debugPrint('Google sign-in error: ${e.toString()}');
     }
   }
 
   Future<void> _onRegisterWithApple(
-      RegisterWithApple event, Emitter<RegistrationState> emit) async {
+    RegisterWithApple event,
+    Emitter<RegistrationState> emit,
+  ) async {
     emit(RegistrationLoading());
+    
     try {
       final appleCredential = await SignInWithApple.getAppleIDCredential(
         scopes: [
@@ -104,96 +99,88 @@ class RegistrationBloc extends Bloc<RegistrationEvent, RegistrationState> {
           AppleIDAuthorizationScopes.fullName,
         ],
       );
-      final AuthCredential credential = OAuthProvider("apple.com").credential(
+
+      final oauthCredential = OAuthProvider('apple.com').credential(
         idToken: appleCredential.identityToken,
         accessToken: appleCredential.authorizationCode,
       );
-      await _auth.signInWithCredential(credential);
-      emit(RegistrationSuccess());
-    } catch (e) {
-      emit(RegistrationFailure("Apple sign-up failed"));
-    }
-  }
 
-  Future<void> _onSendOtpToPhone(
-      SendOtpToPhone event, Emitter<RegistrationState> emit) async {
-    emit(RegistrationLoading());
-    try {
-      await _auth.verifyPhoneNumber(
-        phoneNumber: event.phoneNumber,
-        verificationCompleted: (PhoneAuthCredential credential) async {
-          await _auth.signInWithCredential(credential);
-          emit(OtpVerificationSuccess());
-        },
-        verificationFailed: (FirebaseAuthException e) {
-          emit(OtpVerificationFailure(e.message ?? "OTP verification failed"));
-        },
-        codeSent: (String verificationId, int? resendToken) {
-      emit(OtpSent(
-        verificationId: verificationId,
-        otp: '', // Not used for phone OTP
-      ));
-        },
-        codeAutoRetrievalTimeout: (String verificationId) {
-          emit(OtpVerificationFailure("OTP verification timeout"));
-        },
-        timeout: const Duration(seconds: 60),
+      final userCredential = await _auth.signInWithCredential(oauthCredential);
+      
+      // Save additional user data to Firestore
+      final String fullName = '${appleCredential.givenName ?? ''} '
+          '${appleCredential.familyName ?? ''}'.trim();
+      
+      await _updateUserProfile(
+        userCredential.user,
+        fullName,
+        userCredential.user?.email ?? '',
       );
+
+      emit(RegistrationSuccess(userCredential.user?.email ?? ''));
     } catch (e) {
-      emit(OtpVerificationFailure("Unexpected error occurred"));
+      emit(RegistrationFailure('Apple sign-in failed. Please try again.'));
+      debugPrint('Apple sign-in error: ${e.toString()}');
     }
   }
 
-  Future<void> _onVerifyPhoneOtp(
-      VerifyPhoneOtp event, Emitter<RegistrationState> emit) async {
-    emit(OtpVerificationLoading());
-    try {
-      final AuthCredential credential = PhoneAuthProvider.credential(
-        verificationId: event.verificationId,
-        smsCode: event.smsCode,
-      );
-      await _auth.signInWithCredential(credential);
-      emit(OtpVerificationSuccess());
-    } catch (e) {
-      emit(OtpVerificationFailure("OTP verification failed"));
+  // Helper Methods
+  bool _validateInput(RegistrationSubmitted event, Emitter<RegistrationState> emit) {
+    if (event.name.isEmpty || event.email.isEmpty ||
+        event.password.isEmpty || event.confirmPassword.isEmpty) {
+      emit(RegistrationFailure('Please fill all fields'));
+      return true;
+    }
+    
+    if (event.password != event.confirmPassword) {
+      emit(RegistrationFailure('Passwords do not match'));
+      return true;
+    }
+    
+    if (event.password.length < 6) {
+      emit(RegistrationFailure('Password must be at least 6 characters'));
+      return true;
+    }
+    
+    return false;
+  }
+
+  Future<UserCredential> _createUserAccount(String email, String password) async {
+    return await _auth.createUserWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+  }
+
+  Future<void> _updateUserProfile(User? user, String name, String email) async {
+    if (user != null) {
+      await user.updateDisplayName(name);
+      
+      try {
+        await _firestoreService.saveUserData(
+          user.uid,
+          name,
+          email,
+        );
+      } catch (e) {
+        debugPrint('Firestore error: ${e.toString()}');
+        // Continue even if Firestore fails since auth succeeded
+      }
     }
   }
 
-  Future<void> _onSendOtpToEmail(
-  SendOtpToEmail event,
-  Emitter<RegistrationState> emit,
-) async {
-  emit(RegistrationLoading());
-  try {
-    final otp = _generateOtp();
-    await EmailService.sendOtp(event.email, otp);
-    emit(OtpSent(
-      email: event.email,
-      otp: otp,
-    ));
-  } catch (e) {
-    emit(RegistrationFailure('Failed to send OTP email: ${e.toString()}'));
+  String _getFirebaseErrorMessage(FirebaseAuthException e) {
+    switch (e.code) {
+      case 'email-already-in-use':
+        return 'This email is already registered';
+      case 'invalid-email':
+        return 'Please enter a valid email address';
+      case 'operation-not-allowed':
+        return 'Email/password accounts are not enabled';
+      case 'weak-password':
+        return 'Please enter a stronger password';
+      default:
+        return e.message ?? 'Registration failed';
+    }
   }
 }
-
-
- Future<void> _onVerifyEmailOtp(
-  VerifyEmailOtp event,
-  Emitter<RegistrationState> emit,
-) async {
-  emit(OtpVerificationLoading());
-  final isValid = await EmailService.verifyOtp(event.emailLink, event.enteredOtp);
-  if (isValid) {
-    emit(RegistrationSuccess());
-  } else {
-    emit(RegistrationFailure('Invalid or expired OTP'));
-  }
-}
-
-
-  String _generateOtp() {
-    final random = Random();
-    return (100000 + random.nextInt(900000)).toString();
-  }
-}
-

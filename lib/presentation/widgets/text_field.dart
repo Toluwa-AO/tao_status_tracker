@@ -5,17 +5,19 @@ import 'package:flutter/material.dart';
 class CustomTextField extends StatelessWidget {
   final TextEditingController controller;
   final String label;
+  final String? hintText;
   final bool obscureText;
   final VoidCallback? toggleVisibility;
-  final String? Function(String?)? validator; // Add this
+  final String? Function(String?)? validator;
 
   const CustomTextField({
     super.key,
     required this.controller,
     required this.label,
+    this.hintText,
     this.obscureText = false,
     this.toggleVisibility,
-    this.validator, // Add this
+    this.validator,
   });
 
   @override
@@ -38,7 +40,7 @@ class CustomTextField extends StatelessWidget {
           validator: validator, // Add this
           style: const TextStyle(color: Colors.black87),
           decoration: InputDecoration(
-            hintText: 'Enter $label',
+            hintText: hintText ?? 'Enter $label',
             hintStyle: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,

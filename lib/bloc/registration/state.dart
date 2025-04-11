@@ -31,7 +31,11 @@ class NameValidationError extends RegistrationState {
 }
 
 // Success States
-class RegistrationSuccess extends RegistrationState {}
+class RegistrationSuccess extends RegistrationState {
+  final String email;
+
+  RegistrationSuccess(this.email);
+}
 
 class OtpSent extends RegistrationState {
   final String verificationId; // For phone OTP

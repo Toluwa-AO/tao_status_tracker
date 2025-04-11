@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:tao_status_tracker/bloc/registration/bloc.dart';
 import 'package:tao_status_tracker/bloc/registration/events.dart';
 import 'package:tao_status_tracker/bloc/registration/state.dart';
 import 'package:tao_status_tracker/core/utils/responsive.dart';
-import 'package:tao_status_tracker/presentation/screens/otp_screen.dart';
+import 'package:tao_status_tracker/presentation/screens/verify_email_screen.dart';
 import 'package:tao_status_tracker/presentation/widgets/text_field.dart';
 
 class RegistrationScreen extends StatefulWidget {
@@ -38,39 +37,16 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   void _toggleConfirmPasswordVisibility() =>
       setState(() => _isConfirmPasswordVisible = !_isConfirmPasswordVisible);
 
-  Future<void> _submitRegistration(BuildContext context) async {
+  void _submitRegistration(BuildContext context) {
     if (_formKey.currentState!.validate()) {
-      try {
-        // Register user using FirebaseAuth
-        final FirebaseAuth auth = FirebaseAuth.instance;
-        UserCredential userCredential = await auth.createUserWithEmailAndPassword(
-          email: _emailController.text.trim(),
-          password: _passwordController.text.trim(),
-        );
-
-        // Send email verification
-        await userCredential.user?.sendEmailVerification();
-
-        // Navigate to OTP screen
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => OTPScreen(email: _emailController.text.trim()),
-          ),
-        );
-
-        // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Verification email sent! Please check your inbox.'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      } catch (e) {
-        // Show error message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
-      }
+      context.read<RegistrationBloc>().add(
+        RegistrationSubmitted(
+          name: _nameController.text,
+          email: _emailController.text,
+          password: _passwordController.text,
+          confirmPassword: _confirmPasswordController.text,
+        ),
+      );
     }
   }
 
@@ -83,6 +59,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           if (state is RegistrationFailure) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(state.error), backgroundColor: Colors.red),
+            );
+          } else if (state is RegistrationSuccess) {
+            // Navigate to verify email screen and remove all previous routes
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(
+                builder: (context) => VerifyEmailScreen(email: state.email),
+              ),
+              (route) => false,
             );
           }
         },
@@ -104,6 +88,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     return Padding(
       padding: const EdgeInsets.all(21.0),
       child: Form(
+        // Add Form widget here
         key: _formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -133,18 +118,22 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 children: [
                   CustomTextField(
                     controller: _nameController,
-                    label: "Name",
+                    label: "Username",
+                    hintText: "Enter your username",
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Please enter your name';
+                        return 'Please enter a display name';
                       }
                       if (value.length < 2) {
-                        return 'Name must be at least 2 characters long';
+                        return 'Display name must be at least 2 characters';
                       }
-                      if (!RegExp(r'^[a-zA-Z ]+$').hasMatch(value)) {
-                        return 'Name can only contain letters and spaces';
+                      if (value.length > 20) {
+                        return 'Display name too long (max 20 chars)';
                       }
-                      return null;
+                      if (!RegExp(r'^[a-zA-Z0-9_\- ]+$').hasMatch(value)) {
+                        return 'Only letters, numbers, spaces, - and _ allowed';
+                      }
+                      return null; // Return null if validation passes
                     },
                   ),
                   const SizedBox(height: 5),

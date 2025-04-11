@@ -19,11 +19,15 @@ class LoginLoading extends LoginState {
 
 class LoginSuccess extends LoginState {
   final String? userId;
+  final User? user;
 
-  const LoginSuccess({this.userId, User? user});
+  const LoginSuccess({this.userId, this.user});
 
   @override
-  List<Object> get props => [if (userId != null) userId!];
+  List<Object> get props => [
+    if (userId != null) userId!,
+    if (user != null) user!,
+  ];
 }
 
 class LoginFailure extends LoginState {

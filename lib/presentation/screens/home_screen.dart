@@ -1,16 +1,19 @@
-
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:tao_status_tracker/core/utils/responsive.dart';
 import '../widgets/habit_notification.dart'; // Import the HabitNotificationWidget
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final User? user;
+
+  const HomeScreen({super.key, this.user});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+
   @override
   Widget build(BuildContext context) {
     return Responsive(
@@ -28,17 +31,16 @@ class _HomeScreenState extends State<HomeScreen> {
           Stack(
             children: [
               PopupMenuButton(
-                icon: const Icon(
-                  Icons.notifications,
-                  color: Color(0xFFDB501D),
-                ),
+                icon: const Icon(Icons.notifications, color: Color(0xFFDB501D)),
                 offset: const Offset(0, 50),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
                 itemBuilder: (BuildContext context) {
-                List<String> notifications = []; // Empty list for now
-                notifications.add("No notifications"); // Add a placeholder notification
+                  List<String> notifications = []; // Empty list for now
+                  notifications.add(
+                    "No notifications",
+                  ); // Add a placeholder notification
                   if (notifications.isEmpty) {
                     return [
                       PopupMenuItem(
@@ -59,13 +61,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                 style: TextStyle(
                                   color: Colors.grey,
                                   fontSize: 14,
-                                ),
-                              ),
-                              Text(
-                                'Create a habit to get started',
-                                style: TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 12,
                                 ),
                               ),
                             ],
@@ -109,34 +104,52 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(width: 10),
         ],
       ),
-      body: Container(
-        color: Colors.white,
-        child: Column(
-          children: [
-            const Expanded(
-              child: Center(
-                child: Text('Mobile View'),
+      body: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Container(
+          color: Colors.white,
+          child: Column(
+            children: [
+              Expanded(
+                child: Column(
+                  children: [
+                    Column(
+                      children: [
+                        Text(
+                          'Hi, ${widget.user?.displayName ?? 'User'}!',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        if (widget.user?.displayName == null)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 4),
+                            child: Text(
+                              '(Username not set)',
+                              style: TextStyle(
+                                color: Colors.orange,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildTabletView(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Text('Tablet View'),
-      ),
-    );
+    return Scaffold(body: Center(child: Text('Tablet View')));
   }
 
   Widget _buildDesktopView(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Text('Desktop View'),
-      ),
-    );
+    return Scaffold(body: Center(child: Text('Desktop View')));
   }
 }

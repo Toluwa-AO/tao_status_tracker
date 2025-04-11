@@ -1,6 +1,6 @@
 
 import 'package:flutter/material.dart';
-import 'package:tao_status_tracker/presentation/screens/otp_screen.dart';
+import 'package:tao_status_tracker/presentation/screens/verify_email_screen.dart';
 
 class ChangeEmailScreen extends StatefulWidget {
   const ChangeEmailScreen({super.key});
@@ -15,7 +15,7 @@ class _ChangeEmailScreenState extends State<ChangeEmailScreen> {
   void _submitNewEmail() {
     // Logic to send OTP to new email
     Navigator.of(context).push(MaterialPageRoute(
-      builder: (context) => OTPScreen(email: _emailController.text),
+      builder: (context) => VerifyEmailScreen(email: _emailController.text),
     ));
   }
 

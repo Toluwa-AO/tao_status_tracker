@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  Future<void> saveUserData(String uid, String name, String email) async {
+  Future<void> saveUserData(String uid, String displayName, String email) async {
     try {
       if (_firestore == null) {
         if (kDebugMode) {
@@ -14,7 +14,7 @@ class FirestoreService {
       }
       
       await _firestore.collection('users').doc(uid).set({
-        'name': name,
+        'displayName': displayName,
         'email': email,
         'createdAt': Timestamp.now(),
         'updatedAt': Timestamp.now(),
