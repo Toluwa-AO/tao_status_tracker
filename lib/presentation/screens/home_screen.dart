@@ -1,7 +1,12 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:tao_status_tracker/core/utils/responsive.dart';
+import 'package:tao_status_tracker/presentation/screens/profile_screen.dart';
+import 'package:tao_status_tracker/presentation/widgets/bottom_nav_bar.dart';
 import '../widgets/habit_notification.dart'; // Import the HabitNotificationWidget
+import 'habit_screens.dart'; // Import HabitScreen
+import 'data_screen.dart'; // Import DataScreen
+import 'dashboard_screen.dart'; // Import DashboardScreen
 
 class HomeScreen extends StatefulWidget {
   final User? user;
@@ -13,6 +18,30 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  int _selectedIndex = 0;  
+late final List<Widget> _screens;
+
+@override
+void initState() {
+  super.initState();
+  _screens = [
+    DashboardScreen(user: widget.user), // Pass the user object here
+    HabitScreen(), // Habit Screen
+    DataScreen(),  // Data Screen
+    ProfileScreen(), // Profile Screen
+  ];
+}
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
+  void _onFabPressed() {
+    // Handle FAB press
+    print("FAB tapped!");
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,6 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildMobileView(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        elevation: 0,
         backgroundColor: Colors.white,
         actions: [
           Stack(
@@ -104,42 +134,35 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(width: 10),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Container(
+      backgroundColor: Colors.white,
+      body:_screens[_selectedIndex], // Display the selected screen
+      floatingActionButton: FloatingActionButton(
+        onPressed: _onFabPressed,
+        backgroundColor: Color(0xFFDB501D),
+        child: const Icon(Icons.add, size: 30, color: Colors.white,),
+        elevation: 6,
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
           color: Colors.white,
-          child: Column(
-            children: [
-              Expanded(
-                child: Column(
-                  children: [
-                    Column(
-                      children: [
-                        Text(
-                          'Hi, ${widget.user?.displayName ?? 'User'}!',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        if (widget.user?.displayName == null)
-                          const Padding(
-                            padding: EdgeInsets.only(top: 4),
-                            child: Text(
-                              '(Username not set)',
-                              style: TextStyle(
-                                color: Colors.orange,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          border: Border.all(
+        color: Colors.grey.shade300, // Outline color
+        width: 1, // Outline width
           ),
+          boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.1), // Shadow color
+          spreadRadius: 2, // Spread radius
+          blurRadius: 4, // Blur radius
+          offset: const Offset(0, -2), // Offset in x and y directions
+        ),
+          ],
+        ),
+        child: CustomBottomNavBar(
+          currentIndex: _selectedIndex,
+          onItemTapped: _onItemTapped,
+          onFabPressed: _onFabPressed,
         ),
       ),
     );
