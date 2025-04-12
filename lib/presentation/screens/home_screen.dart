@@ -18,19 +18,19 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _selectedIndex = 0;  
-late final List<Widget> _screens;
+  int _selectedIndex = 0;
+  late final List<Widget> _screens;
 
-@override
-void initState() {
-  super.initState();
-  _screens = [
-    DashboardScreen(user: widget.user), // Pass the user object here
-    HabitScreen(), // Habit Screen
-    DataScreen(),  // Data Screen
-    ProfileScreen(), // Profile Screen
-  ];
-}
+  @override
+  void initState() {
+    super.initState();
+    _screens = [
+      DashboardScreen(user: widget.user), // Pass the user object here
+      HabitScreen(), // Habit Screen
+      DataScreen(), // Data Screen
+      ProfileScreen(), // Profile Screen
+    ];
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -55,8 +55,17 @@ void initState() {
   Widget _buildMobileView(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        title: Text(
+          _getAppBarTitle(),
+          style: const TextStyle(
+            color: Colors.black,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        centerTitle: true,
         elevation: 0,
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.grey[50],
         actions: [
           Stack(
             children: [
@@ -134,12 +143,11 @@ void initState() {
           const SizedBox(width: 10),
         ],
       ),
-      backgroundColor: Colors.white,
-      body:_screens[_selectedIndex], // Display the selected screen
+      body: _screens[_selectedIndex], // Display the selected screen
       floatingActionButton: FloatingActionButton(
         onPressed: _onFabPressed,
         backgroundColor: Color(0xFFDB501D),
-        child: const Icon(Icons.add, size: 30, color: Colors.white,),
+        child: const Icon(Icons.add, size: 30, color: Colors.white),
         elevation: 6,
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
@@ -147,16 +155,16 @@ void initState() {
         decoration: BoxDecoration(
           color: Colors.white,
           border: Border.all(
-        color: Colors.grey.shade300, // Outline color
-        width: 1, // Outline width
+            color: Colors.grey.shade300, // Outline color
+            width: 1, // Outline width
           ),
           boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.1), // Shadow color
-          spreadRadius: 2, // Spread radius
-          blurRadius: 4, // Blur radius
-          offset: const Offset(0, -2), // Offset in x and y directions
-        ),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1), // Shadow color
+              spreadRadius: 2, // Spread radius
+              blurRadius: 4, // Blur radius
+              offset: const Offset(0, -2), // Offset in x and y directions
+            ),
           ],
         ),
         child: CustomBottomNavBar(
@@ -174,5 +182,18 @@ void initState() {
 
   Widget _buildDesktopView(BuildContext context) {
     return Scaffold(body: Center(child: Text('Desktop View')));
+  }
+
+  String _getAppBarTitle() {
+    switch (_selectedIndex) {
+      case 1:
+        return 'Habits';
+      case 2:
+        return 'Data';
+      case 3:
+        return 'Profile';
+      default:
+        return '';
+    }
   }
 }
