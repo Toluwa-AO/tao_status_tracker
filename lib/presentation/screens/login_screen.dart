@@ -223,13 +223,7 @@ class _LoginScreenState extends State<LoginScreen> {
               MaterialPageRoute(
                 builder: (context) => HomeScreen(user: state.user), // Pass user
               ),
-              (route) => false, // Remove all previous routes
-            );
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Login successful!'),
-                backgroundColor: Colors.green,
-              ),
+              (route) => false, 
             );
           }
         },

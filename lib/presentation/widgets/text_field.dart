@@ -47,26 +47,26 @@ class CustomTextField extends StatelessWidget {
               color: Colors.black54
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(30),
               borderSide: const BorderSide(color: Colors.black54),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(20),
               borderSide: const BorderSide(color: Colors.black87),
             ),
             errorBorder: OutlineInputBorder( // Add error border
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(20),
               borderSide: const BorderSide(color: Colors.red),
             ),
             focusedErrorBorder: OutlineInputBorder( // Add focused error border
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(20),
               borderSide: const BorderSide(color: Colors.red),
             ),
             filled: true,
             fillColor: Colors.white,
             contentPadding: const EdgeInsets.symmetric(
               vertical: 12,
-              horizontal: 15
+              horizontal: 20
             ),
             suffixIcon: toggleVisibility != null
                 ? IconButton(
