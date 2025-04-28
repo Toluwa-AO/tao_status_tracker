@@ -4,50 +4,55 @@ import 'package:flutter/material.dart';
 import 'package:tao_status_tracker/models/habit.dart';
 import 'package:tao_status_tracker/presentation/screens/habit_detail_screen.dart';
 
-
 class HabitCard extends StatelessWidget {
   final Habit habit;
   final Function(bool)? onCompletionChanged;
 
-  const HabitCard({
-    Key? key,
-    required this.habit,
-    this.onCompletionChanged,
-  }) : super(key: key);
+  const HabitCard({Key? key, required this.habit, this.onCompletionChanged})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: InkWell(
-        onTap: () => _navigateToDetails(context),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              _buildHabitIcon(),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+    return SizedBox(
+      width: MediaQuery.of(context).size.width * 0.91,
+      child: Card(
+        margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 6),
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: InkWell(
+          onTap: () => _navigateToDetails(context),
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
                   children: [
-                    _buildTitle(),
-                    if (habit.description.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      _buildDescription(),
-                    ],
-                    const SizedBox(height: 8),
-                    _buildMetadata(),
+                    _buildHabitIcon(),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildTitle(),
+                          const SizedBox(height: 4),
+                          _buildCategory(),
+                        ],
+                      ),
+                    ),
+                    _buildCompletionCheckbox(),
                   ],
                 ),
-              ),
-              _buildCompletionCheckbox(),
-            ],
+                if (habit.description.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  _buildDescription(),
+                ],
+                const SizedBox(height: 8),
+                _buildMetadata(),
+              ],
+            ),
           ),
         ),
       ),
@@ -56,16 +61,24 @@ class HabitCard extends StatelessWidget {
 
   Widget _buildHabitIcon() {
     return Container(
-      padding: const EdgeInsets.all(12),
+      width: 40,
+      height: 40,
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: const Color(0xFFDB501D).withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.grey[200],
+        borderRadius: BorderRadius.circular(8),
       ),
-      child: Icon(
-        IconData(habit.iconCode, fontFamily: 'MaterialIcons'),
-        color: const Color(0xFFDB501D),
-        size: 24,
-      ),
+      child: habit.iconPath.isNotEmpty
+          ? Image.asset(
+              habit.iconPath,
+              width: 24,
+              height: 24,
+              errorBuilder: (context, error, stackTrace) {
+                debugPrint('Error loading icon: $error');
+                return const Icon(Icons.check_circle_outline);
+              },
+            )
+          : const Icon(Icons.check_circle_outline),
     );
   }
 
@@ -79,13 +92,20 @@ class HabitCard extends StatelessWidget {
     );
   }
 
+  Widget _buildCategory() {
+    return Text(
+      habit.category,
+      style: TextStyle(
+        color: Colors.grey[600],
+        fontSize: 14,
+      ),
+    );
+  }
+
   Widget _buildDescription() {
     return Text(
       habit.description,
-      style: TextStyle(
-        color: Colors.grey.shade600,
-        fontSize: 14,
-      ),
+      style: TextStyle(color: Colors.grey[600], fontSize: 14),
       maxLines: 2,
       overflow: TextOverflow.ellipsis,
     );
@@ -94,9 +114,21 @@ class HabitCard extends StatelessWidget {
   Widget _buildMetadata() {
     return Row(
       children: [
-        _buildStreakIndicator(),
+        Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
+        const SizedBox(width: 4),
+        Text(
+          _formatSelectedDays(habit.selectedDays),
+          style: TextStyle(color: Colors.grey[600], fontSize: 12),
+        ),
         const SizedBox(width: 16),
-        _buildCategoryIndicator(),
+        Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
+        const SizedBox(width: 4),
+        Text(
+          habit.reminderTime,
+          style: TextStyle(color: Colors.grey[600], fontSize: 12),
+        ),
+        const Spacer(),
+        _buildStreakIndicator(),
       ],
     );
   }
@@ -104,38 +136,11 @@ class HabitCard extends StatelessWidget {
   Widget _buildStreakIndicator() {
     return Row(
       children: [
-        const Icon(
-          Icons.local_fire_department,
-          color: Colors.orange,
-          size: 16,
-        ),
+        const Icon(Icons.local_fire_department, color: Colors.orange, size: 16),
         const SizedBox(width: 4),
         Text(
           '${habit.streak} day streak',
-          style: TextStyle(
-            color: Colors.grey.shade600,
-            fontSize: 12,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCategoryIndicator() {
-    return Row(
-      children: [
-        Icon(
-          Icons.category,
-          color: Colors.grey.shade600,
-          size: 16,
-        ),
-        const SizedBox(width: 4),
-        Text(
-          habit.category,
-          style: TextStyle(
-            color: Colors.grey.shade600,
-            fontSize: 12,
-          ),
+          style: TextStyle(color: Colors.grey[600], fontSize: 12),
         ),
       ],
     );
@@ -149,18 +154,21 @@ class HabitCard extends StatelessWidget {
     );
   }
 
+  String _formatSelectedDays(List<int> days) {
+    final dayNames = ['M', 'T', 'W', 'Th', 'F', 'Sa', 'Su'];
+    return days.map((day) => dayNames[day - 1]).join(', ');
+  }
+
   void _navigateToDetails(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => HabitDetailScreen(habit: habit),
-      ),
+      MaterialPageRoute(builder: (context) => HabitDetailScreen(habit: habit)),
     );
   }
 
   void _handleCompletionChange(bool? value) async {
     if (value == null) return;
-    
+
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;

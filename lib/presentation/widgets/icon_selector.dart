@@ -1,76 +1,56 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 
-class IconSelector extends StatelessWidget {
-  final IconData selectedIcon;
-  final Function(IconData) onIconSelected;
+class IconSelector extends StatefulWidget {
+  final Function(String) onIconSelected;
 
-  const IconSelector({
-    Key? key,
-    required this.selectedIcon,
-    required this.onIconSelected,
-  }) : super(key: key);
+  const IconSelector({Key? key, required this.onIconSelected}) : super(key: key);
+
+  @override
+  _IconSelectorState createState() => _IconSelectorState();
+}
+
+class _IconSelectorState extends State<IconSelector> {
+  String? _selectedIcon;
+
+  final Map<String, String> _icons = {
+    'health': 'assets/icons/health.png',
+    'fitness': 'assets/icons/fitness.png',
+    'education': 'assets/icons/education.png',
+    'work': 'assets/icons/work.png',
+  };
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 200,
-      padding: const EdgeInsets.all(16),
-      child: GridView.builder(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 4,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-        ),
-        itemCount: _availableIcons.length,
-        itemBuilder: (context, index) {
-          final icon = _availableIcons[index];
-          final isSelected = icon == selectedIcon;
-          
-          return InkWell(
-            onTap: () => onIconSelected(icon),
-            child: Container(
-              decoration: BoxDecoration(
-                color: isSelected 
-                    ? const Color(0xFFDB501D).withOpacity(0.1)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: isSelected 
-                      ? const Color(0xFFDB501D)
-                      : Colors.grey.shade300,
-                ),
-              ),
-              child: Icon(
-                icon,
-                color: isSelected 
-                    ? const Color(0xFFDB501D)
-                    : Colors.grey.shade600,
-                size: 28,
-              ),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: _icons.entries.map((entry) {
+        final category = entry.key;
+        final iconPath = entry.value;
+
+        return GestureDetector(
+          onTap: () {
+            setState(() {
+              _selectedIcon = category;
+            });
+            widget.onIconSelected(iconPath);
+          },
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              border: _selectedIcon == category
+                  ? Border.all(color: Colors.orange, width: 2)
+                  : null,
+              borderRadius: BorderRadius.circular(8),
             ),
-          );
-        },
-      ),
+            child: Image.asset(
+              iconPath,
+              width: 40,
+              height: 40,
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
-
-  // Predefined list of icons for habits
-  static const List<IconData> _availableIcons = [
-    Icons.fitness_center, // Exercise
-    Icons.local_drink,    // Water
-    Icons.book,           // Reading
-    Icons.run_circle,     // Running
-    Icons.bed,           // Sleep
-    Icons.breakfast_dining, // Eating
-    Icons.code,          // Coding
-    Icons.music_note,    // Music
-    Icons.brush,         // Art
-    Icons.language,      // Language
-    Icons.savings,       // Finance
-    Icons.smoke_free,    // Quit smoking
-    Icons.nature,        // Environment
-    Icons.school,        // Study
-    Icons.timer,         // Time management
-  ];
 }

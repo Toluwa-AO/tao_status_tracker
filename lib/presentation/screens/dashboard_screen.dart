@@ -1,9 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:tao_status_tracker/core/services/auth_service.dart';
 import 'package:tao_status_tracker/models/habit.dart';
 import 'package:tao_status_tracker/presentation/widgets/habit_card.dart';
 import '../widgets/calendar_row.dart';
+
 
 class DashboardScreen extends StatefulWidget {
   final User? user;
@@ -17,17 +19,20 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   Future<List<Habit>> _fetchCreatedHabits() async {
     try {
-      if (widget.user == null) {
+      final userId = await AuthService().getCurrentUserName(); // Use the same method as in _submitForm
+      if (userId.isEmpty) {
         throw 'User not authenticated';
       }
 
+      debugPrint('Fetching habits for user ID: $userId');
       final snapshot = await FirebaseFirestore.instance
           .collection('users')
-          .doc(widget.user!.uid)
+          .doc(userId)
           .collection('habits')
           .orderBy('createdAt', descending: true)
           .get();
 
+      debugPrint('Fetched ${snapshot.docs.length} habits from Firestore');
       return snapshot.docs
           .map((doc) => Habit.fromMap(doc.id, doc.data()))
           .toList();
@@ -45,7 +50,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        color: Colors.grey[50],
+        color: Colors.white,
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(20.0),
