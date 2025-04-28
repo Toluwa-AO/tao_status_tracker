@@ -1,30 +1,39 @@
-// lib/bloc/create_habit/create_habit_event.dart
+// lib/bloc/create_habit/event.dart
 import 'package:flutter/material.dart';
+import 'package:equatable/equatable.dart';
 
-abstract class CreateHabitEvent {}
+abstract class CreateHabitEvent extends Equatable {
+  @override
+  List<Object?> get props => [];
+}
 
 class SubmitHabit extends CreateHabitEvent {
+  final String userId;
   final String title;
   final String description;
-  final List<String> selectedDays;
-  final TimeOfDay reminderTime;
   final String category;
+  final String iconPath;
+  final List<int> selectedDays;
+  final TimeOfDay reminderTime;
 
   SubmitHabit({
+    required this.userId,
     required this.title,
     required this.description,
+    required this.category,
+    required this.iconPath,
     required this.selectedDays,
     required this.reminderTime,
-    required this.category,
   });
-}
 
-class UpdateSelectedDays extends CreateHabitEvent {
-  final List<String> selectedDays;
-  UpdateSelectedDays(this.selectedDays);
-}
-
-class UpdateReminderTime extends CreateHabitEvent {
-  final TimeOfDay time;
-  UpdateReminderTime(this.time);
+  @override
+  List<Object?> get props => [
+        userId,
+        title,
+        description,
+        category,
+        iconPath,
+        selectedDays,
+        reminderTime,
+      ];
 }

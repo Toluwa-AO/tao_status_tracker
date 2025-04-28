@@ -90,120 +90,37 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         centerTitle: true,
         elevation: 0,
-        backgroundColor: Colors.grey[50],
-        actions: [
-          Stack(
-            children: [
-              PopupMenuButton(
-                icon: const Icon(Icons.notifications, color: Color(0xFFDB501D)),
-                offset: const Offset(0, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                itemBuilder: (BuildContext context) {
-                  List<String> notifications = []; // Empty list for now
-                  notifications.add(
-                    "No notifications",
-                  ); // Add a placeholder notification
-                  if (notifications.isEmpty) {
-                    return [
-                      PopupMenuItem(
-                        enabled: false, // Makes the item non-clickable
-                        child: Container(
-                          width: 200, // Adjust width as needed
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          child: const Column(
-                            children: [
-                              Icon(
-                                Icons.notifications_none,
-                                color: Colors.grey,
-                                size: 30,
-                              ),
-                              SizedBox(height: 8),
-                              Text(
-                                'No notifications',
-                                style: TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ];
-                  }
-
-                  // When you have notifications, you can return them like this:
-                  return notifications.map((notification) {
-                    return PopupMenuItem(
-                      child: Text(notification),
-                      onTap: () {
-                        // Handle notification tap
-                      },
-                    );
-                  }).toList();
-                },
-              ),
-              // Notification badge (only show if there are notifications)
-              if (false) // Replace with condition: notifications.isNotEmpty
-                // ignore: dead_code
-                Positioned(
-                  right: 8,
-                  top: 10,
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      color: Colors.black,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 14,
-                      minHeight: 14,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(width: 10),
-        ],
+        backgroundColor: Colors.white,
       ),
       body: _screens[_selectedIndex], // Display the selected screen
-      floatingActionButton: FloatingActionButton(
-        onPressed: _onFabPressed,
-        backgroundColor: Color(0xFFDB501D),
-        child: const Icon(Icons.add, size: 30, color: Colors.white),
-        elevation: 6,
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,
           border: Border.all(
-        color: Colors.grey.shade300, // Outline color
-        width: 1, // Outline width
+            color: Colors.grey.shade300, // Outline color
+            width: 1, // Outline width
           ),
           boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.1), // Shadow color
-          spreadRadius: 2, // Spread radius
-          blurRadius: 4, // Blur radius
-          offset: const Offset(0, -2), // Offset in x and y directions
-        ),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1), // Shadow color
+              spreadRadius: 2, // Spread radius
+              blurRadius: 4, // Blur radius
+              offset: const Offset(0, -2), // Offset in x and y directions
+            ),
           ],
         ),
         child: ClipRRect(
           borderRadius: const BorderRadius.vertical(
-        top: Radius.circular(16), // Apply notch effect
+            top: Radius.circular(16), // Apply notch effect
           ),
           child: CustomBottomNavBar(
-        currentIndex: _selectedIndex,
-        onItemTapped: _onItemTapped,
-        onFabPressed: _onFabPressed,
+            currentIndex: _selectedIndex,
+            onItemTapped: _onItemTapped,
+            onFabPressed: _onFabPressed,
           ),
         ),
       ),
-      );
+    );
   }
 
   Widget _buildTabletView(BuildContext context) {
