@@ -34,7 +34,7 @@ class CustomTextField extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 5),
-        TextFormField( // Change from TextField to TextFormField
+        TextFormField(
           controller: controller,
           obscureText: obscureText,
           validator: validator, // Add this

@@ -6,7 +6,6 @@ import 'package:tao_status_tracker/models/habit.dart';
 import 'package:tao_status_tracker/presentation/widgets/habit_card.dart';
 import '../widgets/calendar_row.dart';
 
-
 class DashboardScreen extends StatefulWidget {
   final User? user;
 
@@ -17,9 +16,11 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  String? _activeCardId;
+
   Future<List<Habit>> _fetchCreatedHabits() async {
     try {
-      final userId = await AuthService().getCurrentUserName(); // Use the same method as in _submitForm
+      final userId = await AuthService().getCurrentUserName();
       if (userId.isEmpty) {
         throw 'User not authenticated';
       }
@@ -43,17 +44,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _refreshHabits() {
-    setState(() {});
+    // Only refresh if no card is active (not dragging)
+    if (_activeCardId == null) {
+      setState(() {});
+    }
+  }
+
+  void _setActiveCard(String? habitId) {
+    setState(() {
+      _activeCardId = habitId;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        color: Colors.white,
-        child: SafeArea(
+      extendBody: true,
+      backgroundColor: Colors.white,
+      resizeToAvoidBottomInset: false,
+      body: SafeArea(
+        child: Container(
+          color: Colors.white,
           child: Padding(
-            padding: const EdgeInsets.all(20.0),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -65,7 +78,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 _buildTasksHeader(),
                 const SizedBox(height: 10),
                 Expanded(
-                  child: _buildHabitsList(),
+                  child: Container(
+                    color: Colors.white, // Set a solid background color
+                    child: RefreshIndicator(
+                      onRefresh: () async {
+                        _setActiveCard(null);
+                        _refreshHabits();
+                      },
+                      child: FutureBuilder<List<Habit>>(
+                        future: _fetchCreatedHabits(),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState == ConnectionState.waiting) {
+                            return _buildLoadingState();
+                          } else if (snapshot.hasError) {
+                            return _buildErrorState(snapshot.error);
+                          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                            return _buildEmptyState();
+                          } else {
+                            return ListView.builder(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              itemCount: snapshot.data!.length,
+                              itemBuilder: (context, index) {
+                                final habit = snapshot.data![index];
+                                return HabitCard(
+                                  key: ValueKey(habit.id),
+                                  habit: habit,
+                                  isActive: _activeCardId == habit.id,
+                                  onDragStart: () => _setActiveCard(habit.id),
+                                  onDragEnd: () => _setActiveCard(null),
+                                  onActionComplete: () {
+                                    _setActiveCard(null);
+                                    _refreshHabits();
+                                  },
+                                );
+                              },
+                            );
+                          }
+                        },
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -105,29 +157,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         fontSize: 18,
         fontWeight: FontWeight.bold,
         color: Colors.grey[800],
-      ),
-    );
-  }
-
-  Widget _buildHabitsList() {
-    return RefreshIndicator(
-      onRefresh: () async {
-        _refreshHabits();
-      },
-      color: const Color(0xFFDB501D),
-      child: FutureBuilder<List<Habit>>(
-        future: _fetchCreatedHabits(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return _buildLoadingState();
-          } else if (snapshot.hasError) {
-            return _buildErrorState(snapshot.error);
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return _buildEmptyState();
-          } else {
-            return _buildHabitsListView(snapshot.data!);
-          }
-        },
       ),
     );
   }
@@ -192,20 +221,5 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
-
-  Widget _buildHabitsListView(List<Habit> habits) {
-    return ListView.builder(
-      itemCount: habits.length,
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      itemBuilder: (context, index) {
-        final habit = habits[index];
-        return HabitCard(
-          habit: habit,
-          onCompletionChanged: (completed) {
-            _refreshHabits();
-          },
-        );
-      },
-    );
-  }
 }
+

@@ -29,10 +29,10 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _screens = [
-      DashboardScreen(user: widget.user), // Pass the user object here
-      HabitScreen(), // Habit Screen
-      DataScreen(), // Data Screen
-      ProfileScreen(user: widget.user,), // Profile Screen
+      DashboardScreen(user: widget.user),
+      HabitScreen(), 
+      DataScreen(), 
+      ProfileScreen(user: widget.user,), 
     ];
   }
 
@@ -41,31 +41,22 @@ class _HomeScreenState extends State<HomeScreen> {
       _selectedIndex = index;
     });
   }
-
   void _onFabPressed() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => BlocProvider(
-        create: (context) => CreateHabitBloc(),
-        child: BlocListener<CreateHabitBloc, CreateHabitState>(
-          listener: (context, state) {
-            if (state is CreateHabitSuccess) {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Habit created successfully!')),
-              );
-            } else if (state is CreateHabitError) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(state.message)),
-              );
-            }
-          },
-          child: const CreateHabit(),
-        ),
-      ),
-    );
+      builder: (context) {
+        return const CreateHabit();
+      },
+    ).then((result) {
+      if (result == true) {
+        setState(() {
+          debugPrint('New habit created, reloading list');
+          _screens[1] = HabitScreen(); // Reload the HabitScreen
+        });
+      }
+    });
   }
 
   @override
@@ -79,6 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildMobileView(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: Text(
           _getAppBarTitle(),
@@ -91,27 +83,42 @@ class _HomeScreenState extends State<HomeScreen> {
         centerTitle: true,
         elevation: 0,
         backgroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications, color: Colors.black),
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                // backgroundColor: Colors.transparent,
+                builder: (context) => const HabitNotificationWidget(),
+              );
+            },
+          ),
+        ],
       ),
-      body: _screens[_selectedIndex], // Display the selected screen
+      body: SafeArea(
+        child: _screens[_selectedIndex], 
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,
           border: Border.all(
-            color: Colors.grey.shade300, // Outline color
-            width: 1, // Outline width
+            color: Colors.grey.shade300, 
+            width: 1, 
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1), // Shadow color
-              spreadRadius: 2, // Spread radius
-              blurRadius: 4, // Blur radius
-              offset: const Offset(0, -2), // Offset in x and y directions
+              color: Colors.black.withOpacity(0.1), 
+              spreadRadius: 2, 
+              blurRadius: 4, 
+              offset: const Offset(0, -2),
             ),
           ],
         ),
         child: ClipRRect(
           borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(16), // Apply notch effect
+            top: Radius.circular(16), 
           ),
           child: CustomBottomNavBar(
             currentIndex: _selectedIndex,
