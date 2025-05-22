@@ -88,7 +88,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     return Padding(
       padding: const EdgeInsets.all(21.0),
       child: Form(
-        // Add Form widget here
         key: _formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -108,10 +107,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             Center(
               child: Image.asset(
                 "assets/images/Registration.png",
-                height: 200,
+                height: MediaQuery.of(context).size.height * 0.25,
                 width: 200,
               ),
             ),
+            SizedBox(height: MediaQuery.of(context).size.height * 0.02),
             Center(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -185,7 +185,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: MediaQuery.of(context).size.height * 0.050),
             Center(
               child: ElevatedButton(
                 onPressed: () => _submitRegistration(context),
@@ -204,8 +204,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 10),
-            _buildSocialLogin(context),
+            // const SizedBox(height: 10),
+            // _buildSocialLogin(context),
             const SizedBox(height: 5),
             Center(
               child: TextButton(

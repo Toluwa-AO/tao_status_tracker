@@ -158,10 +158,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             // Options List
             Container(
               width: MediaQuery.of(context).size.width,
-              height: 1000,
+              height: MediaQuery.of(context).size.height * 0.5,
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(30),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(30),
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.1),
@@ -182,7 +184,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       // Handle navigation
                       },
                     ),
-                    const SizedBox(height: 10),
+                    SizedBox(height: MediaQuery.of(context).size.height * 0.02,),
                     _buildOptionTile(
                       icon: Icons.settings_outlined,
                       title: 'Settings',
@@ -191,7 +193,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       // Handle navigation
                       },
                     ),
-                    const SizedBox(height: 10),
+                    SizedBox(height: MediaQuery.of(context).size.height * 0.02,),
                     _buildOptionTile(
                       icon: Icons.help_outline,
                       title: 'Support and Feedback',
@@ -200,7 +202,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       // Handle navigation
                       },
                     ),
-                    const SizedBox(height: 10),
+                    SizedBox(height: MediaQuery.of(context).size.height * 0.02,),
                     _buildOptionTile(
                       icon: Icons.logout,
                       title: 'Logout',

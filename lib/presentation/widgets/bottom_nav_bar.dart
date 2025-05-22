@@ -14,25 +14,25 @@ class CustomBottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BottomAppBar(
-      shape: const CircularNotchedRectangle(), // Curved shape for FAB
-      notchMargin: 8, // Space between FAB and BottomAppBar
-      color: Colors.white,
-      elevation: 10,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: <Widget>[
-            // Left side icons
-            Row(
-              children: [
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        BottomAppBar(
+          shape: const CircularNotchedRectangle(), // Curved shape for FAB
+          notchMargin: 8, // Space between FAB and BottomAppBar
+          color: Colors.white,
+          elevation: 10,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround, 
+              children: <Widget>[
                 IconButton(
                   iconSize: 28.0,
                   icon: Icon(
                     Icons.home,
                     color: currentIndex == 0
-                        ? const Color(0xFFDB501D) // Highlighted color
+                        ? const Color(0xFFDB501D)
                         : Colors.grey,
                   ),
                   onPressed: () => onItemTapped(0),
@@ -47,11 +47,7 @@ class CustomBottomNavBar extends StatelessWidget {
                   ),
                   onPressed: () => onItemTapped(1),
                 ),
-              ],
-            ),
-            // Right side icons
-            Row(
-              children: [
+                const SizedBox(width: 48), 
                 IconButton(
                   iconSize: 28.0,
                   icon: Icon(
@@ -74,9 +70,32 @@ class CustomBottomNavBar extends StatelessWidget {
                 ),
               ],
             ),
-          ],
+          ),
         ),
-      ),
+        Positioned(
+          bottom: 10, 
+          child: Container(
+            width: 60, 
+            height: 60, 
+            decoration: BoxDecoration(
+              color: const Color(0xFFDB501D), 
+              borderRadius: BorderRadius.circular(50),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 6,
+                  spreadRadius: 2,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: IconButton(
+              onPressed: onFabPressed,
+              icon: const Icon(Icons.add, size: 30, color: Colors.white),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
