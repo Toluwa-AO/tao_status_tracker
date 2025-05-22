@@ -15,6 +15,9 @@ class SubmitHabit extends CreateHabitEvent {
   final String iconPath;
   final List<int> selectedDays;
   final TimeOfDay reminderTime;
+  final int duration;
+  final String repeat; 
+  final List<DateTime> completionDates;
 
   SubmitHabit({
     required this.userId,
@@ -24,6 +27,9 @@ class SubmitHabit extends CreateHabitEvent {
     required this.iconPath,
     required this.selectedDays,
     required this.reminderTime,
+    required this.duration,
+    required this.repeat, 
+    required this.completionDates,
   });
 
   @override
@@ -35,5 +41,8 @@ class SubmitHabit extends CreateHabitEvent {
         iconPath,
         selectedDays,
         reminderTime,
+        duration,
+        repeat, 
+        completionDates,
       ];
 }

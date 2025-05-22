@@ -7,12 +7,14 @@ import 'package:tao_status_tracker/bloc/create_habit/event.dart';
 import 'package:tao_status_tracker/core/services/auth_service.dart';
 import 'package:tao_status_tracker/models/habit.dart';
 import 'package:tao_status_tracker/models/update_habit.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 class CreateHabit extends StatefulWidget {
   final Habit? habit; // Pass the habit to edit
   final bool isEditing;
+  final VoidCallback? onActionComplete;
 
-  const CreateHabit({Key? key, this.habit, this.isEditing = false}) : super(key: key);
+  const CreateHabit({Key? key, this.habit, this.isEditing = false, this.onActionComplete}) : super(key: key);
 
   @override
   State<CreateHabit> createState() => _CreateHabitState();
@@ -26,6 +28,8 @@ class _CreateHabitState extends State<CreateHabit> {
   late String _selectedCategory;
   late List<String> _selectedDays;
   late String _selectedIconPath;
+  int _duration = 5;
+  String _repeat = 'Once';
 
   final List<String> _weekDays = [
     'Monday',
@@ -84,6 +88,46 @@ class _CreateHabitState extends State<CreateHabit> {
     }
   }
 
+  
+  List<DateTime> getNextCompletionDates(
+    DateTime creationDate,
+    List<int> selectedDays,
+    String repeat, // 'Once', 'Weekly', 'Biweekly', 'Monthly', 'Yearly'
+    {int occurrences = 4}
+  ) {
+    List<DateTime> completionDates = [];
+    DateTime start = DateTime(creationDate.year, creationDate.month, creationDate.day);
+
+    for (int dayIndex in selectedDays) {
+      int targetWeekday = dayIndex + 1; // Dart: Monday=1, ..., Sunday=7
+      int daysToAdd = (targetWeekday - start.weekday + 7) % 7;
+      DateTime firstDate = start.add(Duration(days: daysToAdd));
+
+      if (repeat == 'Once') {
+        completionDates.add(firstDate);
+      } else if (repeat == 'Weekly') {
+        for (int i = 0; i < occurrences; i++) {
+          completionDates.add(firstDate.add(Duration(days: 7 * i)));
+        }
+      } else if (repeat == 'Biweekly') {
+        for (int i = 0; i < occurrences; i++) {
+          completionDates.add(firstDate.add(Duration(days: 14 * i)));
+        }
+      } else if (repeat == 'Monthly') {
+        for (int i = 0; i < occurrences; i++) {
+          completionDates.add(DateTime(firstDate.year, firstDate.month + i, firstDate.day));
+        }
+      } else if (repeat == 'Yearly') {
+        for (int i = 0; i < occurrences; i++) {
+          completionDates.add(DateTime(firstDate.year + i, firstDate.month, firstDate.day));
+        }
+      }
+    }
+    completionDates = completionDates.toSet().toList(); // Remove duplicates
+    completionDates.sort();
+    return completionDates;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Material( 
@@ -91,7 +135,7 @@ class _CreateHabitState extends State<CreateHabit> {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(0, 45, 0, 0),
         child: Container(
-          // height: MediaQuery.of(context).size.height * 0.9,
+           height: MediaQuery.of(context).size.height * 0.8,
           padding: EdgeInsets.only(
             bottom: MediaQuery.of(context).viewInsets.bottom,
           ),
@@ -183,8 +227,8 @@ class _CreateHabitState extends State<CreateHabit> {
                     _buildIconSelector(),
                     const SizedBox(height: 16),
                     const Text(
-                      'Repeat on days:',
-                      style: TextStyle(fontSize: 16),
+                      'Pick day for habit:',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     Wrap(
                       spacing: 8.0,
@@ -211,6 +255,77 @@ class _CreateHabitState extends State<CreateHabit> {
                       }).toList(),
                     ),
                     const SizedBox(height: 10),
+                    const Text(
+                      'Duration:',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8.0,
+                      children: [
+                        '5 min',
+                        '10 min',
+                        '20 min',
+                        '30 min',
+                        '1 hr',
+                        '1 hr 30 min',
+                        '2 hr',
+                      ].map((label) {
+                        final Map<String, int> labelToMinutes = {
+                          '5 min': 5,
+                          '10 min': 10,
+                          '20 min': 20,
+                          '30 min': 30,
+                          '1 hr': 60,
+                          '1 hr 30 min': 90,
+                          '2 hr': 120,
+                        };
+                        final int value = labelToMinutes[label]!;
+                        return ChoiceChip(
+                          label: Text(label),
+                          selected: _duration == value,
+                          selectedColor: const Color(0xFFDB501D),
+                          onSelected: (bool selected) {
+                            setState(() {
+                              _duration = value;
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Repeat:',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      value: _repeat,
+                      decoration: const InputDecoration(
+                        labelText: 'Repeat Frequency',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: [
+                        'Once',
+                        'Weekly',
+                        'Biweekly',
+                        'Monthly',
+                        'Yearly',
+                      ].map((String option) {
+                        return DropdownMenuItem(
+                          value: option,
+                          child: Text(option),
+                        );
+                      }).toList(),
+                      onChanged: (String? newValue) {
+                        if (newValue != null) {
+                          setState(() {
+                            _repeat = newValue;
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 16),
                     ListTile(
                       title: const Text('Reminder Time'),
                       trailing: Text(
@@ -298,59 +413,84 @@ class _CreateHabitState extends State<CreateHabit> {
   Future<void> _submitForm() async {
     if (_formKey.currentState?.validate() ?? false) {
       if (_selectedDays.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please select at least one day')),
-        );
+        Fluttertoast.showToast(msg: 'Please select at least one day');
         return;
       }
-
       if (_selectedIconPath.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please select an icon')),
-        );
+        Fluttertoast.showToast(msg: 'Please select an icon');
+        return;
+      }
+      if (_duration <= 0) {
+        Fluttertoast.showToast(msg: 'Please select a valid duration');
         return;
       }
 
       try {
         final userId = await AuthService().getCurrentUserName();
         debugPrint('Submitting habit for user ID: $userId');
+        debugPrint('Selected duration: $_duration minutes'); 
 
         final selectedDaysIndices = _selectedDays.map((day) => _weekDays.indexOf(day)).toList();
 
-        if (widget.isEditing) {
-          context.read<CreateHabitBloc>().add(
-                UpdateHabit(
-                  id: widget.habit!.id,
-                  userId: userId,
-                  title: _titleController.text,
-                  description: _descriptionController.text,
-                  selectedDays: selectedDaysIndices, 
-                  reminderTime: _selectedTime,
-                  category: _selectedCategory,
-                  iconPath: _selectedIconPath,
-                ),
-              );
-        } else {
-          context.read<CreateHabitBloc>().add(
-                SubmitHabit(
-                  userId: userId,
-                  title: _titleController.text,
-                  description: _descriptionController.text,
-                  selectedDays: selectedDaysIndices, 
-                  reminderTime: _selectedTime,
-                  category: _selectedCategory,
-                  iconPath: _selectedIconPath,
-                ),
-              );
+        // Calculate completion dates using creation date and selected days
+        final creationDate = DateTime.now();
+        final completionDates = getNextCompletionDates(
+          creationDate,
+          selectedDaysIndices,
+          _repeat, // e.g. 'Once', 'Weekly', etc.
+          occurrences: 4, // or any number you want
+        );
+
+        // Debug: Print the calculated completion dates
+        for (var date in completionDates) {
+          debugPrint('Completion date: ${date.toIso8601String()}');
         }
 
+        final habitEvent = widget.isEditing
+            ? UpdateHabit(
+                id: widget.habit!.id,
+                userId: userId,
+                title: _titleController.text,
+                description: _descriptionController.text,
+                selectedDays: selectedDaysIndices,
+                reminderTime: _selectedTime,
+                category: _selectedCategory,
+                iconPath: _selectedIconPath,
+                duration: _duration,
+                repeat: _repeat,
+                completionDates: completionDates, 
+              )
+            : SubmitHabit(
+                userId: userId,
+                title: _titleController.text,
+                description: _descriptionController.text,
+                selectedDays: selectedDaysIndices,
+                reminderTime: _selectedTime,
+                category: _selectedCategory,
+                iconPath: _selectedIconPath,
+                duration: _duration,
+                repeat: _repeat,
+                completionDates: completionDates, 
+              );
+
+        if (!mounted) return; 
+
+        context.read<CreateHabitBloc>().add(habitEvent);
         Navigator.pop(context, true); 
+        debugPrint('Calling onActionComplete callback...');
+        widget.onActionComplete?.call(); 
       } catch (e) {
         debugPrint('Error submitting habit: $e');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to submit habit: $e')),
-        );
+        Fluttertoast.showToast(msg: 'Failed to submit habit: $e');
       }
+    }
+  }
+
+  void _showSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
     }
   }
 

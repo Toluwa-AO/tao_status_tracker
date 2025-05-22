@@ -31,6 +31,9 @@ class CreateHabitBloc extends Bloc<CreateHabitEvent, CreateHabitState> {
         'streak': 0,
         'createdAt': FieldValue.serverTimestamp(),
         'isCompleted': false,
+        'duration': event.duration, 
+        'repeat': event.repeat, 
+        'completionDates': event.completionDates.map((d) => Timestamp.fromDate(d)).toList(), 
       });
 
       emit(CreateHabitSuccess());
@@ -54,6 +57,9 @@ class CreateHabitBloc extends Bloc<CreateHabitEvent, CreateHabitState> {
         'reminderTime': '${event.reminderTime.hour}:${event.reminderTime.minute}',
         'category': event.category,
         'iconPath': event.iconPath,
+        'duration': event.duration, 
+        'repeat': event.repeat, 
+        'completionDates': event.completionDates.map((d) => Timestamp.fromDate(d)).toList(),
       });
 
       emit(CreateHabitSuccess());

@@ -13,6 +13,8 @@ class Habit {
   final String iconPath;
   final List<int> selectedDays;
   final String reminderTime;
+  final int duration;
+  final List<DateTime> completionDates; 
 
   Habit({
     required this.id,
@@ -26,6 +28,8 @@ class Habit {
     required this.iconPath,
     this.selectedDays = const [],
     this.reminderTime = '',
+    this.duration = 0,
+    this.completionDates = const [], 
   });
 
   // Convert to Map for Firestore
@@ -41,6 +45,8 @@ class Habit {
       'iconPath': iconPath,
       'selectedDays': selectedDays,
       'reminderTime': reminderTime,
+      'duration': duration,
+      'completionDates': completionDates.map((d) => Timestamp.fromDate(d)).toList(), 
     };
   }
 
@@ -51,8 +57,8 @@ class Habit {
       title: data['title'] ?? '',
       description: data['description'] ?? '',
       category: data['category'] ?? '',
-      iconCode: (data['icon'] is int) 
-          ? data['icon'] as int 
+      iconCode: (data['icon'] is int)
+          ? data['icon'] as int
           : Icons.check_circle_outline.codePoint,
       streak: data['streak'] ?? 0,
       createdAt: _parseTimestamp(data['createdAt']),
@@ -60,6 +66,8 @@ class Habit {
       iconPath: data['iconPath'] ?? '',
       selectedDays: List<int>.from(data['selectedDays'] ?? []),
       reminderTime: data['reminderTime'] ?? '',
+      duration: data['duration'] ?? 0,
+      completionDates: _parseCompletionDates(data['completionDates']), 
     );
   }
 
@@ -76,6 +84,8 @@ class Habit {
       iconPath: data['iconPath'] ?? '',
       selectedDays: List<int>.from(data['selectedDays'] ?? []),
       reminderTime: data['reminderTime'] ?? '',
+      duration: data['duration'] ?? 0,
+      completionDates: _parseCompletionDates(data['completionDates']), 
     );
   }
 
@@ -84,6 +94,19 @@ class Habit {
       return timestamp.toDate();
     }
     return DateTime.now();
+  }
+
+  static List<DateTime> _parseCompletionDates(dynamic list) {
+    if (list == null) return [];
+    if (list is List) {
+      return list.map<DateTime>((item) {
+        if (item is Timestamp) return item.toDate();
+        if (item is DateTime) return item;
+        if (item is String) return DateTime.parse(item);
+        return DateTime.now();
+      }).toList();
+    }
+    return [];
   }
 
   Habit copyWith({
@@ -98,6 +121,8 @@ class Habit {
     String? iconPath,
     List<int>? selectedDays,
     String? reminderTime,
+    int? duration,
+    List<DateTime>? completionDates, 
   }) {
     return Habit(
       id: id ?? this.id,
@@ -111,6 +136,8 @@ class Habit {
       iconPath: iconPath ?? this.iconPath,
       selectedDays: selectedDays ?? this.selectedDays,
       reminderTime: reminderTime ?? this.reminderTime,
+      duration: duration ?? this.duration,
+      completionDates: completionDates ?? this.completionDates, 
     );
   }
 
@@ -120,7 +147,8 @@ class Habit {
         'category: $category, iconCode: $iconCode, streak: $streak, '
         'createdAt: $createdAt, isCompleted: $isCompleted, '
         'iconPath: $iconPath, selectedDays: $selectedDays, '
-        'reminderTime: $reminderTime)';
+        'reminderTime: $reminderTime, duration: $duration, '
+        'completionDates: $completionDates)';
   }
 
   @override
@@ -136,10 +164,12 @@ class Habit {
         other.createdAt == createdAt &&
         other.isCompleted == isCompleted &&
         other.iconPath == iconPath &&
-        other.reminderTime == reminderTime;
+        other.selectedDays == selectedDays &&
+        other.reminderTime == reminderTime &&
+        other.duration == duration &&
+        _listEquals(other.completionDates, completionDates);
   }
 
-  // Override hashCode
   @override
   int get hashCode {
     return Object.hash(
@@ -152,7 +182,18 @@ class Habit {
       createdAt,
       isCompleted,
       iconPath,
+      selectedDays,
       reminderTime,
+      duration,
+      completionDates,
     );
+  }
+
+  static bool _listEquals(List<DateTime> a, List<DateTime> b) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
   }
 }

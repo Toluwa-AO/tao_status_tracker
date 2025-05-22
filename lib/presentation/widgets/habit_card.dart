@@ -279,7 +279,6 @@ void _deleteHabit(BuildContext context) async {
   }
 }
 
-
   void _navigateToEditHabit(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -288,11 +287,15 @@ void _deleteHabit(BuildContext context) async {
         borderRadius: BorderRadius.vertical(top: Radius.circular(25.0)),
       ),
       builder: (context) {
-        return CreateHabit(habit: widget.habit, isEditing: true);
+        return CreateHabit(
+          habit: widget.habit,
+          isEditing: true,
+          onActionComplete: widget.onActionComplete, 
+        );
       },
     ).then((result) {
       if (result == true) {
-        widget.onActionComplete();
+        widget.onActionComplete(); // Trigger reload after editing
         debugPrint('Habit updated, triggering refresh');
       }
     });

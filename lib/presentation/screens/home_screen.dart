@@ -70,55 +70,72 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildMobileView(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: Text(
-          _getAppBarTitle(),
-          style: const TextStyle(
-            color: Colors.black,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
+      body: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.fromLTRB(26, 60, 16, 0),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: 4,
+                  offset: Offset(2, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  _getAppBarTitle(),
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.notifications, color: Colors.black),
+                  onPressed: () {
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      builder: (context) => const HabitNotificationWidget(),
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
-        ),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications, color: Colors.black),
-            onPressed: () {
-              showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                // backgroundColor: Colors.transparent,
-                builder: (context) => const HabitNotificationWidget(),
-              );
-            },
+          // Main content
+          Expanded(
+            child: Container(
+              color: Colors.white,
+              child: _screens[_selectedIndex],
+            ),
           ),
         ],
-      ),
-      body: SafeArea(
-        child: _screens[_selectedIndex], 
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,
           border: Border.all(
-            color: Colors.grey.shade300, 
-            width: 1, 
+            color: Colors.grey.shade300,
+            width: 1,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1), 
-              spreadRadius: 2, 
-              blurRadius: 4, 
+              color: Colors.black.withOpacity(0.1),
+              spreadRadius: 2,
+              blurRadius: 4,
               offset: const Offset(0, -2),
             ),
           ],
         ),
         child: ClipRRect(
           borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(16), 
+            top: Radius.circular(16),
           ),
           child: CustomBottomNavBar(
             currentIndex: _selectedIndex,
@@ -141,9 +158,9 @@ class _HomeScreenState extends State<HomeScreen> {
   String _getAppBarTitle() {
     switch (_selectedIndex) {
       case 1:
-        return 'Habits';
+        return 'Planner';
       case 2:
-        return 'Data';
+        return 'Habit Progress';
       case 3:
         return 'Profile';
       default:
