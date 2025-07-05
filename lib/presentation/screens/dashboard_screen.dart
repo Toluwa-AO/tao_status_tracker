@@ -1,9 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:tao_status_tracker/core/services/auth_service.dart';
 import 'package:tao_status_tracker/models/habit.dart';
 import 'package:tao_status_tracker/presentation/widgets/habit_card.dart';
 import '../widgets/calendar_row.dart';
+import '../widgets/create_habit.dart'; 
 
 class DashboardScreen extends StatefulWidget {
   final User? user;
@@ -15,19 +17,27 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  String? _activeCardId;
+  bool _showCompletedTasks = false; 
+  DateTime _selectedDate = DateTime.now(); // Track the selected date
+
   Future<List<Habit>> _fetchCreatedHabits() async {
     try {
-      if (widget.user == null) {
+      final userId = await AuthService().getCurrentUserName();
+      if (userId == null || userId.isEmpty) {
+        debugPrint('User ID is null or empty');
         throw 'User not authenticated';
       }
 
+      debugPrint('Fetching habits for user ID: $userId');
       final snapshot = await FirebaseFirestore.instance
           .collection('users')
-          .doc(widget.user!.uid)
+          .doc(userId)
           .collection('habits')
           .orderBy('createdAt', descending: true)
-          .get();
+          .get(const GetOptions(source: Source.serverAndCache)); 
 
+      debugPrint('Fetched ${snapshot.docs.length} habits from Firestore');
       return snapshot.docs
           .map((doc) => Habit.fromMap(doc.id, doc.data()))
           .toList();
@@ -37,33 +47,218 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  void _refreshHabits() {
-    setState(() {});
+  Future<List<Habit>> _fetchCompletedHabits() async {
+    setState(() {
+    });
+
+    try {
+      final userId = await AuthService().getCurrentUserName();
+      if (userId == null || userId.isEmpty) {
+        debugPrint('User ID is null or empty');
+        throw 'User not authenticated';
+      }
+
+      debugPrint('Fetching completed habits for user ID: $userId');
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('habits')
+          .where('isCompleted', isEqualTo: true)
+          .orderBy('completedAt', descending: true)
+          .get();
+
+      debugPrint('Fetched ${snapshot.docs.length} completed habits from Firestore');
+      return snapshot.docs
+          .map((doc) => Habit.fromMap(doc.id, doc.data()))
+          .toList();
+    } catch (e) {
+      debugPrint('Error fetching completed habits: $e');
+      throw 'Failed to load completed habits';
+    } finally {
+      setState(() {
+        // Trigger a rebuild after fetching is complete
+      });
+    }
+  }
+
+  Future<void> _refreshHabits() async {
+    debugPrint('Refreshing habits...');
+    setState(() {
+      // Trigger a rebuild
+    });
+  }
+
+  void _onHabitSubmitted() {
+    _refreshHabits();
+  }
+
+  void _setActiveCard(String? habitId) {
+    setState(() {
+      _activeCardId = habitId;
+    });
+  }
+
+  void _navigateToCreateHabit(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25.0)),
+      ),
+      builder: (context) {
+        return CreateHabit(
+          onActionComplete: _refreshHabits,
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        color: Colors.grey[50],
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildWelcomeSection(),
-                const SizedBox(height: 20),
-                CalendarRow(selectedDate: DateTime.now()),
-                const SizedBox(height: 20),
-                _buildTasksHeader(),
-                const SizedBox(height: 10),
+      extendBody: true,
+      backgroundColor: Colors.white,
+      resizeToAvoidBottomInset: false,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildWelcomeSection(),
+              const SizedBox(height: 20),
+              CalendarRow(selectedDate: _selectedDate),
+              const SizedBox(height: 20),
+              _buildTasksHeader(),
+              const SizedBox(height: 10),   
+              _inProgress(),
+              SizedBox(height: 10),
                 Expanded(
-                  child: _buildHabitsList(),
+                child: RefreshIndicator(
+                  onRefresh: () async {
+                  _setActiveCard(null);
+                  _refreshHabits();
+                  },
+                  child: FutureBuilder<List<Habit>>(
+                  future: _fetchCreatedHabits(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                    return ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                      SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.25,
+                        child: _buildLoadingState(),
+                      ),
+                      ],
+                    );
+                    } else if (snapshot.hasError) {
+                    return ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                      _buildErrorState(snapshot.error),
+                      ],
+                    );
+                    } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                      _buildEmptyState(),
+                      ],
+                    );
+                    } else {
+                    // Filter habits for the selected date
+                    final habitsForSelectedDate = snapshot.data!.where((habit) {
+                      return habit.completionDates.any((date) =>
+                      date.year == _selectedDate.year &&
+                      date.month == _selectedDate.month &&
+                      date.day == _selectedDate.day
+                      );
+                    }).toList();
+
+                    if (habitsForSelectedDate.isEmpty) {
+                      // Habits exist, but none for the selected day
+                      return ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                        Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                          const SizedBox(height: 10),
+                          Image.asset(
+                            'assets/images/empty_habits.png',
+                            width: 200,
+                            height: 200,
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'No habits today',
+                            style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          ],
+                        ),
+                        ),
+                      ],
+                      );
+                    }
+
+                    return ListView.builder(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      itemCount: habitsForSelectedDate.length,
+                      itemBuilder: (context, index) {
+                      final habit = habitsForSelectedDate[index];
+                      return HabitCard(
+                        key: ValueKey(habit.id),
+                        habit: habit,
+                        isActive: _activeCardId == habit.id,
+                        onDragStart: () => _setActiveCard(habit.id),
+                        onDragEnd: () => _setActiveCard(null),
+                        onActionComplete: () {
+                        _setActiveCard(null);
+                        _refreshHabits();
+                        },
+                      );
+                      },
+                    );
+                    }
+                  },
+                  ),
                 ),
-              ],
-            ),
+                ),
+              const SizedBox(height: 20),
+              // _showCompletedTasks
+              //     ? FutureBuilder<List<Habit>>(
+              //         future: _fetchCompletedHabits(),
+              //         builder: (context, snapshot) {
+              //           if (snapshot.connectionState == ConnectionState.waiting) {
+              //             return _buildLoadingState();
+              //           } else if (snapshot.hasError) {
+              //             return _buildErrorState(snapshot.error);
+              //           } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              //             return _completedHabits(
+              //               completedTasksCount: 0,
+              //               completedHabits: [],
+              //             );
+              //           } else {
+              //             return _completedHabits(
+              //               completedTasksCount: snapshot.data!.length,
+              //               completedHabits: snapshot.data,
+              //             );
+              //           }
+              //         },
+              //       )
+              //     : _completedHabits(
+              //         completedTasksCount: 0,
+              //         completedHabits: null,
+              //       ),
+              // const SizedBox(height: 20),
+            ],
           ),
         ),
       ),
@@ -94,36 +289,180 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildTasksHeader() {
-    return Text(
-      'Upcoming Tasks',
-      style: TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
-        color: Colors.grey[800],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  _showCompletedTasks = false;
+                });
+              },
+                child: Container(
+                width: MediaQuery.of(context).size.width * 0.35,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: !_showCompletedTasks ? const Color(0xFFDB501D) : Colors.grey[300],
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                alignment: Alignment.center,
+                child: Center(
+                  child: Text(
+                  'Habits',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: !_showCompletedTasks ? Colors.white : Colors.grey[800],
+                  ),
+                  ),
+                ),
+                ),
+              ),
+              GestureDetector(
+                onTap: () {
+                setState(() {
+                  _showCompletedTasks = true;
+                });
+                },
+                child: Container(
+                width: MediaQuery.of(context).size.width * 0.35,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: _showCompletedTasks ? const Color(0xFFDB501D) : Colors.grey[300],
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                alignment: Alignment.center,
+                child: Center(
+                  child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.lock, color: _showCompletedTasks ? Colors.white : Colors.grey[800], size: 16),
+                    const SizedBox(width: 8),
+                    Text(
+                    'Challenges',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: _showCompletedTasks ? Colors.white : Colors.grey[800],
+                    ),
+                    ),
+                  ],
+                  ),
+                ),
+                ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
-  Widget _buildHabitsList() {
-    return RefreshIndicator(
-      onRefresh: () async {
-        _refreshHabits();
+  Widget _inProgress() {
+    return FutureBuilder<List<Habit>>(
+      future: _fetchCreatedHabits(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Text(
+            'IN PROGRESS ( )',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFFDB501D),
+            ),
+          );
+        } else if (snapshot.hasError) {
+          return Center(
+            child: Text(
+              'Error: ${snapshot.error}',
+              style: const TextStyle(color: Colors.grey),
+            ),
+          );
+        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Text(
+            'IN PROGRESS (0)',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFFDB501D),
+            ),
+          );
+        } else {
+          return Text(
+            'IN PROGRESS (${snapshot.data!.length})',
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFFDB501D),
+            ),
+          );
+        }
       },
-      color: const Color(0xFFDB501D),
-      child: FutureBuilder<List<Habit>>(
-        future: _fetchCreatedHabits(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return _buildLoadingState();
-          } else if (snapshot.hasError) {
-            return _buildErrorState(snapshot.error);
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return _buildEmptyState();
-          } else {
-            return _buildHabitsListView(snapshot.data!);
-          }
-        },
-      ),
+    );
+  }
+
+  Widget _completedHabits({required int completedTasksCount, required List<Habit>? completedHabits}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _completedHeader(completedTasksCount),
+        const SizedBox(height: 10),
+        if (completedHabits == null || completedHabits.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(16),
+            alignment: Alignment.center,
+            child: const Text(
+              'No completed tasks',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+              ),
+            ),
+          )
+        else
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: completedHabits.length,
+            itemBuilder: (context, index) {
+              final habit = completedHabits[index];
+              return HabitCard(
+                key: ValueKey(habit.id),
+                habit: habit,
+                isActive: _activeCardId == habit.id,
+                onDragStart: () => _setActiveCard(habit.id),
+                onDragEnd: () => _setActiveCard(null),
+                onActionComplete: () {
+                  _setActiveCard(null);
+                  _refreshHabits();
+                },
+              );
+            },
+          ),
+      ],
+    );
+  }
+
+  Widget _completedHeader(int completedTasksCount) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        Text(
+          'COMPLETED ($completedTasksCount)',
+          style: const TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+            color: Colors.green,
+          ),
+        ),
+      ],
     );
   }
 
@@ -164,6 +503,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          SizedBox(
+            height: 10,
+          ),
           Image.asset(
             'assets/images/empty_habits.png',
             width: 200,
@@ -187,20 +529,5 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
-
-  Widget _buildHabitsListView(List<Habit> habits) {
-    return ListView.builder(
-      itemCount: habits.length,
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      itemBuilder: (context, index) {
-        final habit = habits[index];
-        return HabitCard(
-          habit: habit,
-          onCompletionChanged: (completed) {
-            _refreshHabits();
-          },
-        );
-      },
-    );
-  }
 }
+

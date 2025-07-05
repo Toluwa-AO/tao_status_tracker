@@ -47,13 +47,13 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildMobileView(BuildContext context, LoginState state) {
     return SingleChildScrollView(
       child: Padding(
-        padding: const EdgeInsets.all(21.0),
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 40),
+              const SizedBox(height: 30),
               GestureDetector(
                 onTap: () => Navigator.pop(context),
                 child: const Icon(
@@ -75,9 +75,9 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 10),
               Center(
-                child: Image.asset("assets/images/login.png", height: 250),
+                child: Image.asset("assets/images/login.png", height: MediaQuery.of(context).size.height*0.3),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
               CustomTextField(
                 controller: _emailController,
                 label: "Email",
@@ -131,8 +131,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                 ),
               ),
-              const SizedBox(height: 20),
-              _buildSocialLogin(),
+              // const SizedBox(height: 20),
+              // _buildSocialLogin(),
               const SizedBox(height: 20),
               Center(
                 child: TextButton(

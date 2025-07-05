@@ -1,0 +1,66 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // User documents
+    match /users/{userId} {
+      // User can read and write their own user document
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // Connections subcollection: user manages their connections
+      match /connections/{connectionId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Notifications subcollection: user manages their notifications
+      match /notifications/{notificationId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Challenges subcollection: connected users can create challenges
+      match /challenges/{challengeId} {
+        allow create: if request.auth != null
+                      && request.auth.uid == userId
+                      && request.resource.data.challengerId == request.auth.uid
+                      && request.resource.data.challengeeId == userId
+                      && exists(/databases/$(database)/documents/users/$(userId)/connections/$(request.auth.uid));
+
+        allow read: if request.auth != null
+                    && (request.auth.uid == userId || request.resource.data.challengerId == request.auth.uid);
+
+        allow update: if request.auth != null
+                      && request.auth.uid == userId
+                      && request.resource.data.challengeeId == userId;
+
+        allow delete: if false; // Challenges cannot be deleted
+      }
+
+      // Habits subcollection: owner and connected users can read; only owner can write
+      match /habits/{habitId} {
+        allow read: if request.auth != null && (
+          request.auth.uid == userId || // Owner can read
+          exists(/databases/$(database)/documents/users/$(userId)/connections/$(request.auth.uid)) // Connected users can read
+        );
+
+        allow write: if request.auth != null
+                     && request.auth.uid == userId
+                     && habitId == request.resource.data.id
+                     && request.resource.data.userId == userId;
+
+        function isValidHabit() {
+          return request.resource.data.keys().hasAll(['id', 'userId', 'createdAt']) // Ensure createdAt is present
+                 && request.resource.data.id == habitId
+                 && request.resource.data.userId == userId;
+        }
+
+        allow create, update: if isValidHabit();
+        allow delete: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // Deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

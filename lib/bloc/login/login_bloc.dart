@@ -27,7 +27,11 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
 
       emit(LoginSuccess(user: userCredential.user));
     } on FirebaseAuthException catch (e) {
-      emit(LoginFailure(error: e.message ?? "An error occurred"));
+      if (e.code == 'user-not-found' || e.code == 'wrong-password') {
+        emit(LoginFailure(error: "The email or password is incorrect"));
+      } else {
+        emit(LoginFailure(error: e.message ?? "An error occurred"));
+      }
     } catch (e) {
       emit(LoginFailure(error: "Unexpected error occurred"));
     }

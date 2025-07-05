@@ -3,14 +3,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:tao_status_tracker/bloc/create_habit/bloc.dart';
 import 'package:tao_status_tracker/bloc/create_habit/state.dart';
+import 'package:tao_status_tracker/core/services/habit_reminder_scheduler.dart';
+import 'package:tao_status_tracker/core/services/in_app_notification_service.dart';
 import 'package:tao_status_tracker/core/utils/responsive.dart';
+import 'package:tao_status_tracker/core/utils/security_utils.dart';
 import 'package:tao_status_tracker/presentation/screens/profile_screen.dart';
 import 'package:tao_status_tracker/presentation/widgets/bottom_nav_bar.dart';
 import 'package:tao_status_tracker/presentation/widgets/create_habit.dart';
-import '../widgets/habit_notification.dart'; // Import the HabitNotificationWidget
-import 'habit_screens.dart'; // Import HabitScreen
-import 'data_screen.dart'; // Import DataScreen
-import 'dashboard_screen.dart'; // Import DashboardScreen
+import 'package:tao_status_tracker/presentation/widgets/simple_notification_manager.dart';
+import '../widgets/habit_notification.dart'; 
+import 'habit_screens.dart';
+import 'data_screen.dart'; 
+import 'dashboard_screen.dart'; 
 
 class HomeScreen extends StatefulWidget {
   final User? user;
@@ -21,19 +25,40 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _selectedIndex = 0;
   late final List<Widget> _screens;
+  final SimpleNotificationManager _notificationManager = SimpleNotificationManager();
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    
     _screens = [
-      DashboardScreen(user: widget.user), // Pass the user object here
-      HabitScreen(), // Habit Screen
-      DataScreen(), // Data Screen
-      ProfileScreen(user: widget.user,), // Profile Screen
+      DashboardScreen(user: widget.user),
+      HabitScreen(),
+      DataScreen(),
+      ProfileScreen(user: widget.user),
     ];
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _notificationManager.initialize(context);
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _notificationManager.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      SecurityUtils.secureLog('App backgrounded - clearing sensitive data');
+    }
   }
 
   void _onItemTapped(int index) {
@@ -47,25 +72,30 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => BlocProvider(
-        create: (context) => CreateHabitBloc(),
-        child: BlocListener<CreateHabitBloc, CreateHabitState>(
-          listener: (context, state) {
-            if (state is CreateHabitSuccess) {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Habit created successfully!')),
-              );
-            } else if (state is CreateHabitError) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(state.message)),
-              );
-            }
-          },
-          child: const CreateHabit(),
+      builder: (context) {
+        return const CreateHabit();
+      },
+    ).then((result) {
+      if (result == true) {
+        setState(() {
+          _screens[1] = HabitScreen();
+        });
+      }
+    }).catchError((error) {
+      _handleError(error);
+    });
+  }
+
+  void _handleError(dynamic error) {
+    SecurityUtils.secureLog('Error in HomeScreen: $error');
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('An error occurred. Please try again.'),
+          backgroundColor: Colors.red,
         ),
-      ),
-    );
+      );
+    }
   }
 
   @override
@@ -79,131 +109,77 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildMobileView(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          _getAppBarTitle(),
-          style: const TextStyle(
-            color: Colors.black,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: Colors.grey[50],
-        actions: [
-          Stack(
-            children: [
-              PopupMenuButton(
-                icon: const Icon(Icons.notifications, color: Color(0xFFDB501D)),
-                offset: const Offset(0, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+      body: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.fromLTRB(26, 60, 16, 0),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: 4,
+                  offset: Offset(2, 2),
                 ),
-                itemBuilder: (BuildContext context) {
-                  List<String> notifications = []; // Empty list for now
-                  notifications.add(
-                    "No notifications",
-                  ); // Add a placeholder notification
-                  if (notifications.isEmpty) {
-                    return [
-                      PopupMenuItem(
-                        enabled: false, // Makes the item non-clickable
-                        child: Container(
-                          width: 200, // Adjust width as needed
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          child: const Column(
-                            children: [
-                              Icon(
-                                Icons.notifications_none,
-                                color: Colors.grey,
-                                size: 30,
-                              ),
-                              SizedBox(height: 8),
-                              Text(
-                                'No notifications',
-                                style: TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ];
-                  }
-
-                  // When you have notifications, you can return them like this:
-                  return notifications.map((notification) {
-                    return PopupMenuItem(
-                      child: Text(notification),
-                      onTap: () {
-                        // Handle notification tap
-                      },
-                    );
-                  }).toList();
-                },
-              ),
-              // Notification badge (only show if there are notifications)
-              if (false) // Replace with condition: notifications.isNotEmpty
-                // ignore: dead_code
-                Positioned(
-                  right: 8,
-                  top: 10,
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      color: Colors.black,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 14,
-                      minHeight: 14,
-                    ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  _getAppBarTitle(),
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-            ],
+                IconButton(
+                  icon: const Icon(Icons.notifications, color: Colors.black),
+                  onPressed: () {
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      builder: (context) => const HabitNotificationWidget(),
+                    ).catchError((error) {
+                      _handleError(error);
+                    });
+                  },
+                ),
+              ],
+            ),
           ),
-          const SizedBox(width: 10),
+          Expanded(
+            child: Container(
+              color: Colors.white,
+              child: _screens[_selectedIndex],
+            ),
+          ),
         ],
       ),
-      body: _screens[_selectedIndex], // Display the selected screen
-      floatingActionButton: FloatingActionButton(
-        onPressed: _onFabPressed,
-        backgroundColor: Color(0xFFDB501D),
-        child: const Icon(Icons.add, size: 30, color: Colors.white),
-        elevation: 6,
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          border: Border.all(
-        color: Colors.grey.shade300, // Outline color
-        width: 1, // Outline width
-          ),
+          border: Border.all(color: Colors.grey.shade300, width: 1),
           boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.1), // Shadow color
-          spreadRadius: 2, // Spread radius
-          blurRadius: 4, // Blur radius
-          offset: const Offset(0, -2), // Offset in x and y directions
-        ),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              spreadRadius: 2,
+              blurRadius: 4,
+              offset: const Offset(0, -2),
+            ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: const BorderRadius.vertical(
-        top: Radius.circular(16), // Apply notch effect
-          ),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
           child: CustomBottomNavBar(
-        currentIndex: _selectedIndex,
-        onItemTapped: _onItemTapped,
-        onFabPressed: _onFabPressed,
+            currentIndex: _selectedIndex,
+            onItemTapped: _onItemTapped,
+            onFabPressed: _onFabPressed,
           ),
         ),
       ),
-      );
+    );
   }
 
   Widget _buildTabletView(BuildContext context) {
@@ -217,9 +193,9 @@ class _HomeScreenState extends State<HomeScreen> {
   String _getAppBarTitle() {
     switch (_selectedIndex) {
       case 1:
-        return 'Habits';
+        return 'Planner';
       case 2:
-        return 'Data';
+        return 'Habit Progress';
       case 3:
         return 'Profile';
       default:
