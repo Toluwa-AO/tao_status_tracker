@@ -113,12 +113,25 @@ class AppSecurityService {
       final encryptedValue = _sensitiveCache[key];
       if (encryptedValue != null) {
         final decryptedData = SecurityUtils.decryptPayload(encryptedValue);
-        return decryptedData['data'] as T?;
+        if (decryptedData != null) {
+          return decryptedData['data'] as T?;
+        }
       }
       return null;
     } catch (e) {
       SecurityUtils.secureLog('Error retrieving sensitive data: $e');
       return null;
+    }
+  }
+
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      SecurityUtils.secureLog('App backgrounded - clearing sensitive data');
+      // TODO: Actually clear sensitive data here for better security.
+      // Example:
+      // sensitiveData = null;
+      // authToken = null;
+      // You can also trigger a lock screen or require re-authentication on resume.
     }
   }
 }
