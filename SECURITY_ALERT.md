@@ -6,19 +6,16 @@
 - `lib/firebase_options.dart` - **IMMEDIATE ACTION REQUIRED**
 
 ### Exposed Information:
-- Firebase API Keys (Web, Android, iOS)
-- Project ID: status-tracker-7d6bf
-- Storage Bucket URLs
-- Messaging Sender IDs
+- Firebase API Keys (multiple platforms)
+- Project configuration details
+- Storage and messaging identifiers
 
 ## IMMEDIATE ACTIONS REQUIRED:
 
 ### 1. Regenerate Firebase Keys
-```bash
-# Go to Firebase Console
-# Project Settings > General > Your apps
-# Delete and recreate app configurations
-```
+- Go to Firebase Console
+- Project Settings > General > Your apps
+- Delete and recreate app configurations
 
 ### 2. Remove from Git History
 ```bash
@@ -28,33 +25,25 @@ git filter-branch --force --index-filter \
 ```
 
 ### 3. Use Environment Variables
-- Move keys to `.env` file (already created)
-- Update imports to use `FirebaseConfig`
-- Add `.env` to `.gitignore` (already done)
+- Move keys to `.env` file
+- Update imports to use secure config
+- Add `.env` to `.gitignore`
 
 ### 4. Update Firebase Security Rules
-```javascript
-// Firestore rules - restrict access
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if request.auth != null;
-    }
-  }
-}
-```
+- Restrict database access
+- Enable authentication requirements
+- Review storage permissions
 
 ### 5. Monitor for Abuse
 - Check Firebase Console for unusual activity
 - Monitor authentication logs
-- Review storage usage
+- Review usage metrics
 
 ## RISK LEVEL: HIGH
-- Unauthorized access to Firebase project
-- Data theft/manipulation possible
+- Unauthorized access possible
+- Data compromise risk
 - Potential billing abuse
-- User data compromise
+- User privacy at risk
 
 ## STATUS: UNRESOLVED
 Action required within 24 hours.
