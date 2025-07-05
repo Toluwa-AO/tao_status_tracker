@@ -14,6 +14,7 @@ class Habit {
   final List<int> selectedDays;
   final String reminderTime;
   final int duration;
+  final String repeat; 
   final List<DateTime> completionDates; 
 
   Habit({
@@ -29,6 +30,7 @@ class Habit {
     this.selectedDays = const [],
     this.reminderTime = '',
     this.duration = 0,
+    this.repeat = 'Once', 
     this.completionDates = const [], 
   });
 
@@ -46,6 +48,7 @@ class Habit {
       'selectedDays': selectedDays,
       'reminderTime': reminderTime,
       'duration': duration,
+      'repeat': repeat, 
       'completionDates': completionDates.map((d) => Timestamp.fromDate(d)).toList(), 
     };
   }
@@ -67,6 +70,7 @@ class Habit {
       selectedDays: List<int>.from(data['selectedDays'] ?? []),
       reminderTime: data['reminderTime'] ?? '',
       duration: data['duration'] ?? 0,
+      repeat: data['repeat'] ?? 'Once', 
       completionDates: _parseCompletionDates(data['completionDates']), 
     );
   }
@@ -85,6 +89,7 @@ class Habit {
       selectedDays: List<int>.from(data['selectedDays'] ?? []),
       reminderTime: data['reminderTime'] ?? '',
       duration: data['duration'] ?? 0,
+      repeat: data['repeat'] ?? 'Once', 
       completionDates: _parseCompletionDates(data['completionDates']), 
     );
   }
@@ -122,6 +127,7 @@ class Habit {
     List<int>? selectedDays,
     String? reminderTime,
     int? duration,
+    String? repeat, 
     List<DateTime>? completionDates, 
   }) {
     return Habit(
@@ -137,6 +143,7 @@ class Habit {
       selectedDays: selectedDays ?? this.selectedDays,
       reminderTime: reminderTime ?? this.reminderTime,
       duration: duration ?? this.duration,
+      repeat: repeat ?? this.repeat, 
       completionDates: completionDates ?? this.completionDates, 
     );
   }
@@ -148,6 +155,7 @@ class Habit {
         'createdAt: $createdAt, isCompleted: $isCompleted, '
         'iconPath: $iconPath, selectedDays: $selectedDays, '
         'reminderTime: $reminderTime, duration: $duration, '
+        'repeat: $repeat, ' 
         'completionDates: $completionDates)';
   }
 
@@ -167,6 +175,7 @@ class Habit {
         other.selectedDays == selectedDays &&
         other.reminderTime == reminderTime &&
         other.duration == duration &&
+        other.repeat == repeat && 
         _listEquals(other.completionDates, completionDates);
   }
 
@@ -185,6 +194,7 @@ class Habit {
       selectedDays,
       reminderTime,
       duration,
+      repeat, 
       completionDates,
     );
   }

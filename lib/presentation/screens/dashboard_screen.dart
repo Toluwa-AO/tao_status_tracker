@@ -19,6 +19,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   String? _activeCardId;
   bool _showCompletedTasks = false; 
+  DateTime _selectedDate = DateTime.now(); // Track the selected date
 
   Future<List<Habit>> _fetchCreatedHabits() async {
     try {
@@ -126,69 +127,110 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               _buildWelcomeSection(),
               const SizedBox(height: 20),
-              CalendarRow(selectedDate: DateTime.now()),
+              CalendarRow(selectedDate: _selectedDate),
               const SizedBox(height: 20),
               _buildTasksHeader(),
-              const SizedBox(height: 10),
+              const SizedBox(height: 10),   
               _inProgress(),
               SizedBox(height: 10),
-              Expanded(
+                Expanded(
                 child: RefreshIndicator(
                   onRefresh: () async {
-                    _setActiveCard(null);
-                    _refreshHabits();
+                  _setActiveCard(null);
+                  _refreshHabits();
                   },
                   child: FutureBuilder<List<Habit>>(
-                    future: _fetchCreatedHabits(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return ListView(
-                          physics: const AlwaysScrollableScrollPhysics(),
+                  future: _fetchCreatedHabits(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                    return ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                      SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.25,
+                        child: _buildLoadingState(),
+                      ),
+                      ],
+                    );
+                    } else if (snapshot.hasError) {
+                    return ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                      _buildErrorState(snapshot.error),
+                      ],
+                    );
+                    } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                      _buildEmptyState(),
+                      ],
+                    );
+                    } else {
+                    // Filter habits for the selected date
+                    final habitsForSelectedDate = snapshot.data!.where((habit) {
+                      return habit.completionDates.any((date) =>
+                      date.year == _selectedDate.year &&
+                      date.month == _selectedDate.month &&
+                      date.day == _selectedDate.day
+                      );
+                    }).toList();
+
+                    if (habitsForSelectedDate.isEmpty) {
+                      // Habits exist, but none for the selected day
+                      return ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                        Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            SizedBox(
-                              height: MediaQuery.of(context).size.height * 0.25,
-                              child: _buildLoadingState(),
+                          const SizedBox(height: 10),
+                          Image.asset(
+                            'assets/images/empty_habits.png',
+                            width: 200,
+                            height: 200,
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'No habits today',
+                            style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey,
                             ),
+                          ),
+                          const SizedBox(height: 8),
                           ],
-                        );
-                      } else if (snapshot.hasError) {
-                        return ListView(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          children: [
-                            _buildErrorState(snapshot.error),
-                          ],
-                        );
-                      } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                        return ListView(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          children: [
-                            _buildEmptyState(),
-                          ],
-                        );
-                      } else {
-                        return ListView.builder(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          itemCount: snapshot.data!.length,
-                          itemBuilder: (context, index) {
-                            final habit = snapshot.data![index];
-                            return HabitCard(
-                              key: ValueKey(habit.id),
-                              habit: habit,
-                              isActive: _activeCardId == habit.id,
-                              onDragStart: () => _setActiveCard(habit.id),
-                              onDragEnd: () => _setActiveCard(null),
-                              onActionComplete: () {
-                                _setActiveCard(null);
-                                _refreshHabits();
-                              },
-                            );
-                          },
-                        );
-                      }
-                    },
+                        ),
+                        ),
+                      ],
+                      );
+                    }
+
+                    return ListView.builder(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      itemCount: habitsForSelectedDate.length,
+                      itemBuilder: (context, index) {
+                      final habit = habitsForSelectedDate[index];
+                      return HabitCard(
+                        key: ValueKey(habit.id),
+                        habit: habit,
+                        isActive: _activeCardId == habit.id,
+                        onDragStart: () => _setActiveCard(habit.id),
+                        onDragEnd: () => _setActiveCard(null),
+                        onActionComplete: () {
+                        _setActiveCard(null);
+                        _refreshHabits();
+                        },
+                      );
+                      },
+                    );
+                    }
+                  },
                   ),
                 ),
-              ),
+                ),
               const SizedBox(height: 20),
               // _showCompletedTasks
               //     ? FutureBuilder<List<Habit>>(
@@ -259,49 +301,61 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   _showCompletedTasks = false;
                 });
               },
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 60),
+                child: Container(
+                width: MediaQuery.of(context).size.width * 0.35,
+                padding: const EdgeInsets.symmetric(vertical: 8),
                 decoration: BoxDecoration(
-                  color: !_showCompletedTasks ? Color(0xFFDB501D) : Colors.grey[300],
+                  color: !_showCompletedTasks ? const Color(0xFFDB501D) : Colors.grey[300],
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Text(
+                alignment: Alignment.center,
+                child: Center(
+                  child: Text(
                   'Habits',
+                  textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                     color: !_showCompletedTasks ? Colors.white : Colors.grey[800],
                   ),
+                  ),
+                ),
                 ),
               ),
-            ),
-            GestureDetector(
-              onTap: () {
+              GestureDetector(
+                onTap: () {
                 setState(() {
                   _showCompletedTasks = true;
                 });
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 40),
+                },
+                child: Container(
+                width: MediaQuery.of(context).size.width * 0.35,
+                padding: const EdgeInsets.symmetric(vertical: 8),
                 decoration: BoxDecoration(
-                  color: _showCompletedTasks ? Color(0xFFDB501D) : Colors.grey[300],
+                  color: _showCompletedTasks ? const Color(0xFFDB501D) : Colors.grey[300],
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Row(
+                alignment: Alignment.center,
+                child: Center(
+                  child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.lock, color: Colors.white, size: 16), // Padlock icon
+                    Icon(Icons.lock, color: _showCompletedTasks ? Colors.white : Colors.grey[800], size: 16),
                     const SizedBox(width: 8),
                     Text(
-                      'Challenges',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: _showCompletedTasks ? Colors.white : Colors.grey[800],
-                      ),
+                    'Challenges',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: _showCompletedTasks ? Colors.white : Colors.grey[800],
+                    ),
                     ),
                   ],
+                  ),
                 ),
-              ),
+                ),
             ),
           ],
         ),

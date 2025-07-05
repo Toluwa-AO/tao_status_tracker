@@ -5,12 +5,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:tao_status_tracker/bloc/create_habit/bloc.dart';
 import 'package:tao_status_tracker/bloc/create_habit/event.dart';
 import 'package:tao_status_tracker/core/services/auth_service.dart';
+import 'package:tao_status_tracker/core/services/habit_reminder_scheduler.dart';
+import 'package:tao_status_tracker/core/utils/security_utils.dart';
 import 'package:tao_status_tracker/models/habit.dart';
 import 'package:tao_status_tracker/models/update_habit.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
 class CreateHabit extends StatefulWidget {
-  final Habit? habit; // Pass the habit to edit
+  final Habit? habit;
   final bool isEditing;
   final VoidCallback? onActionComplete;
 
@@ -66,6 +68,8 @@ class _CreateHabitState extends State<CreateHabit> {
     _selectedCategory = widget.habit?.category ?? 'Health';
     _selectedDays = widget.habit?.selectedDays.map((index) => _weekDays[index]).toList() ?? [];
     _selectedIconPath = widget.habit?.iconPath ?? '';
+    _duration = widget.habit?.duration ?? 5; 
+    _repeat = widget.habit?.repeat ?? 'Once'; 
 
     _loadIconsForCategory(_selectedCategory); 
   }
@@ -84,22 +88,22 @@ class _CreateHabitState extends State<CreateHabit> {
         _categoryIcons = icons;
       });
     } catch (e) {
-      debugPrint('Error loading icons: $e');
+      SecurityUtils.secureLog('Error loading icons: $e');
+      _showError('Failed to load icons');
     }
   }
 
-  
   List<DateTime> getNextCompletionDates(
     DateTime creationDate,
     List<int> selectedDays,
-    String repeat, // 'Once', 'Weekly', 'Biweekly', 'Monthly', 'Yearly'
+    String repeat, 
     {int occurrences = 4}
   ) {
     List<DateTime> completionDates = [];
     DateTime start = DateTime(creationDate.year, creationDate.month, creationDate.day);
 
     for (int dayIndex in selectedDays) {
-      int targetWeekday = dayIndex + 1; // Dart: Monday=1, ..., Sunday=7
+      int targetWeekday = dayIndex + 1;
       int daysToAdd = (targetWeekday - start.weekday + 7) % 7;
       DateTime firstDate = start.add(Duration(days: daysToAdd));
 
@@ -123,9 +127,20 @@ class _CreateHabitState extends State<CreateHabit> {
         }
       }
     }
-    completionDates = completionDates.toSet().toList(); // Remove duplicates
+    completionDates = completionDates.toSet().toList();
     completionDates.sort();
     return completionDates;
+  }
+
+  void _showError(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -180,9 +195,13 @@ class _CreateHabitState extends State<CreateHabit> {
                         labelText: 'Habit Title',
                         border: OutlineInputBorder(),
                       ),
+                      maxLength: 50,
                       validator: (value) {
                         if (value?.isEmpty ?? true) {
                           return 'Please enter a title';
+                        }
+                        if (value!.length < 3) {
+                          return 'Title must be at least 3 characters';
                         }
                         return null;
                       },
@@ -195,6 +214,13 @@ class _CreateHabitState extends State<CreateHabit> {
                         border: OutlineInputBorder(),
                       ),
                       maxLines: 2,
+                      maxLength: 200,
+                      validator: (value) {
+                        if (value != null && value.length > 200) {
+                          return 'Description must be less than 200 characters';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
@@ -413,45 +439,52 @@ class _CreateHabitState extends State<CreateHabit> {
   Future<void> _submitForm() async {
     if (_formKey.currentState?.validate() ?? false) {
       if (_selectedDays.isEmpty) {
-        Fluttertoast.showToast(msg: 'Please select at least one day');
+        _showError('Please select at least one day');
         return;
       }
       if (_selectedIconPath.isEmpty) {
-        Fluttertoast.showToast(msg: 'Please select an icon');
+        _showError('Please select an icon');
         return;
       }
       if (_duration <= 0) {
-        Fluttertoast.showToast(msg: 'Please select a valid duration');
+        _showError('Please select a valid duration');
         return;
       }
 
       try {
         final userId = await AuthService().getCurrentUserName();
-        debugPrint('Submitting habit for user ID: $userId');
-        debugPrint('Selected duration: $_duration minutes'); 
+        if (userId == null) {
+          _showError('Authentication required');
+          return;
+        }
+
+        // Rate limiting
+        if (!SecurityUtils.canMakeRequest(userId, cooldownSeconds: 2)) {
+          _showError('Please wait before creating another habit');
+          return;
+        }
+
+        SecurityUtils.secureLog('Submitting habit for user ID: $userId');
 
         final selectedDaysIndices = _selectedDays.map((day) => _weekDays.indexOf(day)).toList();
-
-        // Calculate completion dates using creation date and selected days
         final creationDate = DateTime.now();
         final completionDates = getNextCompletionDates(
           creationDate,
           selectedDaysIndices,
-          _repeat, // e.g. 'Once', 'Weekly', etc.
-          occurrences: 4, // or any number you want
+          _repeat, 
+          occurrences: 4, 
         );
 
-        // Debug: Print the calculated completion dates
-        for (var date in completionDates) {
-          debugPrint('Completion date: ${date.toIso8601String()}');
-        }
+        // Sanitize inputs
+        final sanitizedTitle = SecurityUtils.sanitizeInput(_titleController.text);
+        final sanitizedDescription = SecurityUtils.sanitizeInput(_descriptionController.text);
 
         final habitEvent = widget.isEditing
             ? UpdateHabit(
                 id: widget.habit!.id,
                 userId: userId,
-                title: _titleController.text,
-                description: _descriptionController.text,
+                title: sanitizedTitle,
+                description: sanitizedDescription,
                 selectedDays: selectedDaysIndices,
                 reminderTime: _selectedTime,
                 category: _selectedCategory,
@@ -462,8 +495,8 @@ class _CreateHabitState extends State<CreateHabit> {
               )
             : SubmitHabit(
                 userId: userId,
-                title: _titleController.text,
-                description: _descriptionController.text,
+                title: sanitizedTitle,
+                description: sanitizedDescription,
                 selectedDays: selectedDaysIndices,
                 reminderTime: _selectedTime,
                 category: _selectedCategory,
@@ -476,21 +509,57 @@ class _CreateHabitState extends State<CreateHabit> {
         if (!mounted) return; 
 
         context.read<CreateHabitBloc>().add(habitEvent);
+        
+        // Schedule notifications for the habit
+        _scheduleNotificationForHabit(
+          title: sanitizedTitle,
+          description: sanitizedDescription,
+          selectedDays: selectedDaysIndices,
+          reminderTime: "${_selectedTime.hour}:${_selectedTime.minute.toString().padLeft(2, '0')}",
+          iconCode: Icons.check_circle_outline.codePoint,
+          duration: _duration,
+          id: widget.isEditing ? widget.habit!.id : 'habit-${DateTime.now().millisecondsSinceEpoch}',
+          iconPath: _selectedIconPath,
+          category: _selectedCategory,
+        );
+        
         Navigator.pop(context, true); 
-        debugPrint('Calling onActionComplete callback...');
+        SecurityUtils.secureLog('Habit submission completed');
         widget.onActionComplete?.call(); 
       } catch (e) {
-        debugPrint('Error submitting habit: $e');
-        Fluttertoast.showToast(msg: 'Failed to submit habit: $e');
+        SecurityUtils.secureLog('Error submitting habit: $e');
+        _showError('Failed to save habit. Please try again.');
       }
     }
   }
-
-  void _showSnackBar(String message) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
+  
+  void _scheduleNotificationForHabit({
+    required String title,
+    required String description,
+    required List<int> selectedDays,
+    required String reminderTime,
+    required int iconCode,
+    required int duration,
+    required String id,
+    required String iconPath,
+    required String category,
+  }) {
+    if (reminderTime.isNotEmpty && selectedDays.isNotEmpty) {
+      final habit = Habit(
+        id: id,
+        title: title,
+        description: description,
+        category: category,
+        iconCode: iconCode,
+        createdAt: DateTime.now(),
+        iconPath: iconPath,
+        selectedDays: selectedDays,
+        reminderTime: reminderTime,
+        duration: duration,
       );
+      
+      // Schedule the habit for reminders
+      HabitReminderScheduler().scheduleHabit(habit);
     }
   }
 

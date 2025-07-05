@@ -3,14 +3,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:tao_status_tracker/bloc/create_habit/bloc.dart';
 import 'package:tao_status_tracker/bloc/create_habit/state.dart';
+import 'package:tao_status_tracker/core/services/habit_reminder_scheduler.dart';
+import 'package:tao_status_tracker/core/services/in_app_notification_service.dart';
 import 'package:tao_status_tracker/core/utils/responsive.dart';
+import 'package:tao_status_tracker/core/utils/security_utils.dart';
 import 'package:tao_status_tracker/presentation/screens/profile_screen.dart';
 import 'package:tao_status_tracker/presentation/widgets/bottom_nav_bar.dart';
 import 'package:tao_status_tracker/presentation/widgets/create_habit.dart';
-import '../widgets/habit_notification.dart'; // Import the HabitNotificationWidget
-import 'habit_screens.dart'; // Import HabitScreen
-import 'data_screen.dart'; // Import DataScreen
-import 'dashboard_screen.dart'; // Import DashboardScreen
+import 'package:tao_status_tracker/presentation/widgets/simple_notification_manager.dart';
+import '../widgets/habit_notification.dart'; 
+import 'habit_screens.dart';
+import 'data_screen.dart'; 
+import 'dashboard_screen.dart'; 
 
 class HomeScreen extends StatefulWidget {
   final User? user;
@@ -21,19 +25,40 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _selectedIndex = 0;
   late final List<Widget> _screens;
+  final SimpleNotificationManager _notificationManager = SimpleNotificationManager();
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    
     _screens = [
       DashboardScreen(user: widget.user),
-      HabitScreen(), 
-      DataScreen(), 
-      ProfileScreen(user: widget.user,), 
+      HabitScreen(),
+      DataScreen(),
+      ProfileScreen(user: widget.user),
     ];
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _notificationManager.initialize(context);
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _notificationManager.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      SecurityUtils.secureLog('App backgrounded - clearing sensitive data');
+    }
   }
 
   void _onItemTapped(int index) {
@@ -41,6 +66,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _selectedIndex = index;
     });
   }
+
   void _onFabPressed() {
     showModalBottomSheet(
       context: context,
@@ -52,11 +78,24 @@ class _HomeScreenState extends State<HomeScreen> {
     ).then((result) {
       if (result == true) {
         setState(() {
-          debugPrint('New habit created, reloading list');
-          _screens[1] = HabitScreen(); // Reload the HabitScreen
+          _screens[1] = HabitScreen();
         });
       }
+    }).catchError((error) {
+      _handleError(error);
     });
+  }
+
+  void _handleError(dynamic error) {
+    SecurityUtils.secureLog('Error in HomeScreen: $error');
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('An error occurred. Please try again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -102,13 +141,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       context: context,
                       isScrollControlled: true,
                       builder: (context) => const HabitNotificationWidget(),
-                    );
+                    ).catchError((error) {
+                      _handleError(error);
+                    });
                   },
                 ),
               ],
             ),
           ),
-          // Main content
           Expanded(
             child: Container(
               color: Colors.white,
@@ -120,10 +160,7 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          border: Border.all(
-            color: Colors.grey.shade300,
-            width: 1,
-          ),
+          border: Border.all(color: Colors.grey.shade300, width: 1),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.1),
@@ -134,9 +171,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         child: ClipRRect(
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(16),
-          ),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
           child: CustomBottomNavBar(
             currentIndex: _selectedIndex,
             onItemTapped: _onItemTapped,

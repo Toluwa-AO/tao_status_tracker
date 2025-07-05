@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:tao_status_tracker/core/services/auth_service.dart';
+import 'package:tao_status_tracker/core/services/habit_reminder_scheduler.dart';
 import 'package:tao_status_tracker/models/habit.dart';
 
 class HabitScreen extends StatefulWidget {
@@ -18,6 +19,7 @@ class _HabitScreenState extends State<HabitScreen> {
   List<Map<String, dynamic>> _selectedDayHabits = [];
   bool _isLoading = true;
   String _errorMessage = '';
+  List<Habit> _allHabits = [];
 
   final List<String> _monthNames = [
     'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -59,6 +61,12 @@ class _HabitScreenState extends State<HabitScreen> {
         }
       }).where((habit) => habit != null).cast<Habit>().toList();
 
+      // Store all habits for scheduling notifications
+      _allHabits = habits;
+      
+      // Schedule notifications for all habits
+      _scheduleNotificationsForExistingHabits(habits);
+
       // Group habits by their completionDates
       final Map<DateTime, List<Habit>> habitsByCompletionDate = {};
       for (var habit in habits) {
@@ -94,6 +102,16 @@ class _HabitScreenState extends State<HabitScreen> {
           _isLoading = false;
           _errorMessage = 'Could not load habits. Please check your internet connection and try again.';
         });
+      }
+    }
+  }
+  
+  void _scheduleNotificationsForExistingHabits(List<Habit> habits) {
+    debugPrint('Scheduling notifications for ${habits.length} existing habits');
+    for (final habit in habits) {
+      if (habit.reminderTime.isNotEmpty && habit.selectedDays.isNotEmpty) {
+        HabitReminderScheduler().scheduleHabit(habit);
+        debugPrint('Scheduled notification for existing habit: ${habit.title}, time: ${habit.reminderTime}, days: ${habit.selectedDays}');
       }
     }
   }
@@ -187,6 +205,26 @@ class _HabitScreenState extends State<HabitScreen> {
                   color: Color(0xFFDB501D),
                   shape: BoxShape.circle,
                 ),
+                markersMaxCount: 1,
+                markersAutoAligned: false,
+                markerMargin: const EdgeInsets.only(top: 2),
+                canMarkersOverflow: false,
+              ),
+              calendarBuilders: CalendarBuilders(
+                markerBuilder: (context, date, events) {
+                  if (isSameDay(date, _selectedDay) || events.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
+                  return Container(
+                    width: 6,
+                    height: 6,
+                    margin: const EdgeInsets.only(top: 2),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFDB501D),
+                      shape: BoxShape.circle,
+                    ),
+                  );
+                },
               ),
               headerVisible: false,
             ),
